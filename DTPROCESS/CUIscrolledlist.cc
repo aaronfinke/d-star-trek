@@ -87,8 +87,8 @@ extern void BX_SET_BACKGROUND_COLOR(Widget, ArgList, Cardinal *, Pixel);
 
 
 // Begin user code block <head>
-//#include <iostream.h>
-//#include <iomanip.h>
+//#include <iostream>
+//#include <iomanip>
 #include "dtreksys.h"
 
 using std::cin;

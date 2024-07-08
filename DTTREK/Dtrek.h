@@ -49,9 +49,9 @@
 //+Include files
 
 #if !defined(VC9) && !defined(__APPLE__) && !defined(NEW_IOS)
-    #include <iostream.h>
-    #include <iomanip.h>
-	#include <fstream.h>
+    #include <iostream>
+    #include <iomanip>
+	#include <fstream>
 #else
 	#include <iostream>
     #include <iomanip>

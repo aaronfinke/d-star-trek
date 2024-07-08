@@ -43,8 +43,8 @@
 //+Include files
 
 #if !defined(VC8) && !defined(__APPLE__)
-    #include <iostream.h>
-    #include <iomanip.h>
+    #include <iostream>
+    #include <iomanip>
 #else
     #include <iostream>
     #include <iomanip>

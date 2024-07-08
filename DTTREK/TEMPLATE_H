@@ -47,7 +47,7 @@
 
 //+Include files
 
-#include <iostream.h>
+#include <iostream>
 #include "Cimage_header.h"
 
 //+Definitions and constants

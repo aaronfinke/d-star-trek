@@ -4500,10 +4500,12 @@ int nPlot(const char* pcName,itr<double>& afY,itr<double>* pafX) {
 
     if ((pcName == NULL) || (!pcName[0])) {
         pcNameIn = sLastName.string();
-        pcAttrib = "at";
+        std::string pcAttrib_at = "at";
+        pcAttrib = const_cast<char*>(pcAttrib_at.c_str());
     } else {
         pcNameIn = (char*) pcName;
-        pcAttrib = "wt";
+        std::string pcAttrib_wt = "wt";
+        pcAttrib = const_cast<char*>(pcAttrib_wt.c_str());
         sLastName = pcName;
     }
 
@@ -4532,10 +4534,12 @@ int nPlot(const char* pcName,itr<double>& afY,double fStartX,double fStepX) {
 
     if ((pcName == NULL) || (!pcName[0])) {
         pcNameIn = sLastName.string();
-        pcAttrib = "at";
+        std::string pcAttrib_at = "at";
+        pcAttrib = const_cast<char*>(pcAttrib_at.c_str());
     } else {
         pcNameIn = (char*) pcName;
-        pcAttrib = "wt";
+        std::string pcAttrib_at = "wt";
+        pcAttrib = const_cast<char*>(pcAttrib_at.c_str());
         sLastName = pcName;
     }
 

@@ -262,7 +262,7 @@ void CResoStrategyBins::vCountTheoreticalUniqueReflectionsInResoShells(Ccrystal*
 void CResoStrategyBins::vListStats()
 {
     //This function will caculate and report bin table statistics
-    char*         pcLine = "--------------------------------------------------------------------------------\n";
+    char*         pcLine = (char*) "--------------------------------------------------------------------------------\n";
 
     printf("\n\nExpected Completeness vs Resolution\n");
 

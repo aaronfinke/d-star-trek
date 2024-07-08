@@ -109,7 +109,7 @@ extern void BX_SET_BACKGROUND_COLOR(Widget, ArgList, Cardinal *, Pixel);
 
 #include <Xm/Protocols.h>
 #if !defined(VC9) && !defined(__APPLE__) && !defined(NEW_IOS)
-#include <iomanip.h>
+#include <iomanip>
 #else
 #include <iomanip>
 #endif

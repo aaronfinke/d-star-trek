@@ -5975,7 +5975,7 @@ int Creflnlist::nGenerateLog(Cstring& sLogbuf,const Cstring& sFilename,tagBinary
 /////////////////////////////////////////////////////////////////////
 
 // The \0 is for octal
-char* tagBinary_Ref_Header::ms_pcId = "\032\012\014\012\004D*TREK_BIN";
+char* tagBinary_Ref_Header::ms_pcId = (char*)"\032\012\014\012\004D*TREK_BIN";
 
 CReffloat tagBinary_Ref_Header::ms_fCodeFloat = 1234.2f;
 int tagBinary_Ref_Header::ms_nCodeInt = 1234;

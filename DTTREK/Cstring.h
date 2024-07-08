@@ -52,9 +52,9 @@
 
 //#if !defined(VC8) && !defined(__APPLE__)
 #if defined(VC6)
-    #include <iostream.h>
-    #include <iomanip.h>
-	#include <fstream.h>
+    #include <iostream>
+    #include <iomanip>
+	#include <fstream>
 #else 
     #include <iostream>
     #include <iomanip>

@@ -49,8 +49,8 @@
 //
 //+Include files
 
-//#include <iostream.h>
-//#include <iomanip.h>
+//#include <iostream>
+//#include <iomanip>
 #include "Cimage.h"
 #include "Cstring.h"
 #include "Cscan.h"

@@ -33,11 +33,11 @@
 # Edit the next lines for your site
 #
 # Directory where OpenMotif is installed.
-MOTIFHOME  := /Applications/OpenMotif21
+MOTIFHOME  := /usr
 # Directory where CBF library is located.
-CBFHOME    := $(CURDIR)/CBF
+CBFHOME    := /home/aaronfinke/cbflib
 # Directory where PTypes library is located.
-PTYPESHOME := $(CURDIR)/ptypes
+PTYPESHOME := /home/aaronfinke/d-star-trek/ptypes/ptypes-2.1.1/
 
 # Lines below should not need to be modified
 

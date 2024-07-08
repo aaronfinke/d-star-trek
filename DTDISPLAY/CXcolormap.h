@@ -51,8 +51,8 @@
 
 #include "Xm/Xm.h"
 
-//#include <iostream.h>
-//#include <iomanip.h>
+//#include <iostream>
+//#include <iomanip>
 #include "Dtrek.h"
 #include "Cstring.h"
 

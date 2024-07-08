@@ -39,7 +39,8 @@ $(info d*TREK library Makefile)
 # Define method to get system architecture to use in subsequent file names:
 #
 
-CC_OPTIONS = -DNEW_IOS -DLINUX -DBINARY_NOT_BIN -DNO_MFC -D_GNU_SOURCE -pthread -static-libgcc -Wl,-rpath='$$ORIGIN' -Wl,--unresolved-symbols=ignore-in-shared-libs -z origin
+CC_OPTIONS = -DNEW_IOS -DLINUX -DBINARY_NOT_BIN -DNO_MFC -D_GNU_SOURCE -pthread \
+             -static-libgcc -Wl,-rpath='$$ORIGIN' -Wl,--unresolved-symbols=ignore-in-shared-libs -z origin  
 
 ## WARNING! dtsvd.o is broken if compiled -O2, but -O1 seems to be OK.
 OPTLEV     =    -O1 -g
@@ -105,7 +106,6 @@ CCFLAGSDBG =	-g $(CCDEFS) -I. -I../DTDISPLAY -I$(PTYPESHOME)/include \
 
 GLIBDIR	   =    
 COMPILE.cc =	$(CC) -c $(CCFLAGS)
-INSTALLDIR =    ../../bin$(DTREK_BINSUFFIX)
 
 ALL	   =	dtfind dtpixhist dtindex dtrefine dtpredict dtstrategy dtmultistrategy \
                 dtintegrate dtprofit dtcorrect dtreflnmerge dtbeammask \

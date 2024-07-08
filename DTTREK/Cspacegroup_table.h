@@ -2578,5 +2578,4 @@ char* g_cpSpaceGroupNames[230]={
 "Im-3m",
 "Ia-3d"
 };
-
 #endif // !DT_SPACE_GROUP_TABLE_H

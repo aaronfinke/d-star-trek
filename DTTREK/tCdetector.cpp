@@ -50,7 +50,7 @@
 //
 //+Include files
 
-#include <iostream.h>
+#include <iostream>
 #include "Dtrek.h"
 #include "Cdetector.h"
 #include "Csource.h"

@@ -51,7 +51,7 @@
 //
 //+Include files
 
-#include <iostream.h>
+#include <iostream>
 #include "Cimage_header.h"
 #include "Cstring.h"
 

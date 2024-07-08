@@ -58,8 +58,8 @@
 //
 //+Include files
 
-#include <iostream.h>
-#include <iomanip.h>
+#include <iostream>
+#include <iomanip>
 #include "Cstring.h"
 #include "Crefln.h"
 #include "Creflnlist.h"

@@ -55,7 +55,7 @@
 //+Include files
 
 #include <stdio.h>        // for sprintf, until we figure out sstream
-#include <iostream.h>
+#include <iostream>
 #include "Cstring.h"
 #include "Dtrek.h"
 #include "Cimage_header.h"

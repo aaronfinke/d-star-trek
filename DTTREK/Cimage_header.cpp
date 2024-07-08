@@ -2270,20 +2270,35 @@ typedef struct
     char*               sName;
 }IMAGE_FORMAT_TYPE;
 
+std::vector<std::string> image_format_types = {
+"unknown",
+"RigakuCCD",
+"RAXIS",
+"DIP",
+"Medoptics",
+"Bruker_Siemens",
+"Windows_Bitmap",
+"ADSC",
+"Brandeis",
+"CBF_DTREK",
+"BAS2000",
+"HiPic"
+};
+
 static const IMAGE_FORMAT_TYPE s_c_stImageFormatTypes[]=
 {
-    enImage_format_unknown,         "unknown",                          
-    enImage_format_RIGAKU_CCD,      "RigakuCCD",
-    enImage_format_RAXIS,           "RAXIS",
-    enImage_format_DIP,             "DIP",
-    enImage_format_MEDOPTICS,       "Medoptics",
-    enImage_format_BRUKER_SIEMENS,  "Bruker_Siemens",
-    enImage_format_WINBMP,          "Windows_Bitmap",
-    enImage_format_ADSC,            "ADSC",
-    enImage_format_BRANDEIS,        "Brandeis",
-    enImage_format_CBFDTREK,        "CBF_DTREK",
-    enImage_format_BAS2000,         "BAS2000",
-    enImage_format_HIPIC,           "HiPic",
+    enImage_format_unknown,         const_cast<char*> (image_format_types[0].c_str()),                          
+    enImage_format_RIGAKU_CCD,      const_cast<char*> (image_format_types[1].c_str()),  
+    enImage_format_RAXIS,           const_cast<char*> (image_format_types[2].c_str()),  
+    enImage_format_DIP,             const_cast<char*> (image_format_types[3].c_str()),  
+    enImage_format_MEDOPTICS,       const_cast<char*> (image_format_types[4].c_str()),  
+    enImage_format_BRUKER_SIEMENS,  const_cast<char*> (image_format_types[5].c_str()),  
+    enImage_format_WINBMP,          const_cast<char*> (image_format_types[6].c_str()),  
+    enImage_format_ADSC,            const_cast<char*> (image_format_types[7].c_str()),  
+    enImage_format_BRANDEIS,        const_cast<char*> (image_format_types[8].c_str()),  
+    enImage_format_CBFDTREK,        const_cast<char*> (image_format_types[9].c_str()),  
+    enImage_format_BAS2000,         const_cast<char*> (image_format_types[10].c_str()),  
+    enImage_format_HIPIC,           const_cast<char*> (image_format_types[11].c_str()),  
 
     enImage_format_unknown,         NULL                // by design NULL must be the last string value in this array           
 };

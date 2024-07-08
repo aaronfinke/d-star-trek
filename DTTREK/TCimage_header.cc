@@ -45,7 +45,7 @@
 //+Description
 //    This routine tests the class Cimage_header.
 
-#include <iostream.h>
+#include <iostream>
 #include "Cimage_header.h"
 
 int main()

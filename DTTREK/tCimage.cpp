@@ -50,7 +50,7 @@
 //
 //+Include files
 
-#include <iostream.h>
+#include <iostream>
 #include "Cimage.h"
 
 //+Code begin

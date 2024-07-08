@@ -37,11 +37,11 @@
  */
 
 #if !defined(VC9) && !defined(__APPLE__) && !defined(NEW_IOS)
-#include <iostream.h>
+#include <iostream>
 #else
 #include <iostream>
 #endif
-#include <libio.h>
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" 
@@ -49,12 +49,12 @@ extern "C"
 #endif
 
 //struct _IO_FILE_plus;
-struct _IO_FILE* _IO_stdin_ (_IO_FILE* _fp)
-{
-  //cout << "WARNING! _IO_stdin_ called!\n" << flush;
-  //cout << "WARNING! Please contact MSC about _IO_stdin_!\n" << flush;
-  return (_IO_stdin);
-}
+// struct _IO_FILE* _IO_stdin_ (_IO_FILE* _fp)
+// {
+//   //cout << "WARNING! _IO_stdin_ called!\n" << flush;
+//   //cout << "WARNING! Please contact MSC about _IO_stdin_!\n" << flush;
+//   return (_IO_stdin);
+// }
 
 #ifdef __cplusplus
 }

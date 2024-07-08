@@ -37,7 +37,7 @@ $(info d*TREK dtprocess Makefile)
 
 C++FLAGS        = -DLINUX -g -DNEW_IOS -DFUNCPROTO -DXTFUNCPROTO -L../DTTREK -L../DTDISPLAY -L../../lib -I../DTTREK -I../DTDISPLAY -I/usr/X11R6/include
 SLIBS= -lXp -lXext -lSM -lICE -lXpm -lXm -lXt -lX11
-LIBS=-ldtrek$(OSTYPE) -ldtrekX$(OSTYPE) -L$(CBFHOME)/lib -L/usr/X11R6/lib -lXm -lXt -lX11 $(SLIBS) -lm -lcrypt -ldl -lcbf
+LIBS=-ldtrek$(OSTYPE) -ldtrekX$(OSTYPE) -L$(CBFHOME)/lib -L/usr/X11R6/lib -L/usr/lib64 -lXm -lXt -lX11 $(SLIBS) -lm -lcrypt -ldl -lcbf
 OFILES = main-cc.o UIComponent.o bxutils-cc.o callbacks-cc.o CUIheaderEdit.o CUIfileFilter.o CUIscrolledlist.o CUIviewheader.o CUInumberField.o CUItextnumArrow.o CUIom9.o MainWindow.o static_lx.o
 FILES = main-cc.cc UIComponent.cc bxutils-cc.cc callbacks-cc.cc CUIheaderEdit.cc CUIfileFilter.cc CUIscrolledlist.cc CUIviewheader.cc CUInumberField.cc CUItextnumArrow.cc CUIom9.cc MainWindow.cc  static_lx.cc
 

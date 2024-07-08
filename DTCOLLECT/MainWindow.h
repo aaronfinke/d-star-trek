@@ -87,9 +87,9 @@ class CUIimagefileSelect;
 // Begin user code block <head>
 
 #if !defined(VC9) && !defined(__APPLE__) && !defined(NEW_IOS)
-#include <iostream.h>
-#include <fstream.h>
-#include <iomanip.h>
+#include <iostream>
+#include <fstream>
+#include <iomanip>
 #else
 #include <iostream>
 #include <fstream>

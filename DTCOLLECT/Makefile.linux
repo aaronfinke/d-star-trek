@@ -47,7 +47,6 @@
 DEVDIR= ../DTDEV
 #DEVDIR= ../DTDEVRAXISC
 
-INSTALLDIR      = ../../bin_linux
 CC=g++ -DLINUX
 
 ###-DSGI -DRAXIS4_CLIENT 

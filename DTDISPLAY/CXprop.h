@@ -47,7 +47,7 @@
 
 //+Include files
 
-//#include <iostream.h>
+//#include <iostream>
 #include "X11/Intrinsic.h"
 #include "X11/Xatom.h"
 // For typedef of bool in some cases:

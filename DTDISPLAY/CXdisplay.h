@@ -55,8 +55,8 @@
 #include <X11/keysym.h>
 #include "Dtrek.h"
 #include "Cstring.h"
-//#include <iostream.h>
-//#include <iomanip.h>
+//#include <iostream>
+//#include <iomanip>
 #include "Cimage.h"
 #include "CXcolormap.h"
 #include "CXrubberband.h"

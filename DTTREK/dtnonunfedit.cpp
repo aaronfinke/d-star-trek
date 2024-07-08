@@ -54,7 +54,7 @@
 //
 //+Include files
 
-//#include <iostream.h>
+//#include <iostream>
 #include "Cstring.h"
 #include "Cimage.h"
 #include "Cnonunf.h"

@@ -1,5 +1,5 @@
 // 
-// Copyright © 2001 Rigaku/MSC, Inc.
+// Copyright ï¿½ 2001 Rigaku/MSC, Inc.
 //                  9009 New Trails Drive  
 //                  The Woodlands, TX, USA  77381  
 // 
@@ -67,7 +67,7 @@
 #endif
 
 #if (defined(_MSC_VER) && (_MSC_VER==1100))
-#include <fstream.h>
+#include <fstream>
 #else
 #include <fstream>
 #endif

@@ -84,8 +84,8 @@ do the following:
 #include <ctype.h>
 
 #if !defined(WIN32) && !defined(__APPLE__) && !defined(NEW_IOS)
-    #include <iostream.h>
-    #include <iomanip.h>
+    #include <iostream>
+    #include <iomanip>
 #else
     #include <iostream>
     #include <iomanip>
