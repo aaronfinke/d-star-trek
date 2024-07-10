@@ -33,13 +33,13 @@
 $(info )
 $(info d*TREK dtprocess Makefile)
 
-C++FLAGS        = -DOSX -g -DFUNCPROTO -DXTFUNCPROTO -L../DTTREK -L../DTDISPLAY -I../DTTREK -I../DTDISPLAY -I/usr/X11R6/include -I$(MOTIFHOME)/include
-SLIBS= $(MOTIFHOME)/lib/libXm.a -lX11 -lXp -lXext -lSM -lICE -lXpm -lXt
+C++FLAGS        = -DOSX -g -DFUNCPROTO -DXTFUNCPROTO -L../DTTREK -L../DTDISPLAY -I../DTTREK -I../DTDISPLAY  -I$(MOTIFHOME)/include -I$(HOMEBREW)/include  -fsanitize=address -fno-omit-frame-pointer
+SLIBS= $(HOMEBREW)/lib/libXm.dylib  $(HOMEBREW)/lib/libXt.dylib -L$(HOMEBREW)/lib -lX11 -lXp -lXext -lSM -lICE -lXpm -lXt
 LIBS=-ldtrek$(OSTYPE) -ldtrekX$(OSTYPE)  -L/usr/X11R6/lib $(SLIBS) -lm -lmx  
 LIBS=-ldtrek$(OSTYPE) -ldtrekX$(OSTYPE)  -L/usr/X11R6/lib -L$(CBFHOME)/lib $(SLIBS) -lm -lmx -lcbf
 OFILES = main-cc.o UIComponent.o bxutils-cc.o callbacks-cc.o CUIheaderEdit.o CUIfileFilter.o CUIscrolledlist.o CUIviewheader.o CUInumberField.o CUItextnumArrow.o CUIom9.o MainWindow.o
 FILES = main-cc.cc UIComponent.cc bxutils-cc.cc callbacks-cc.cc CUIheaderEdit.cc CUIfileFilter.cc CUIscrolledlist.cc CUIviewheader.cc CUInumberField.cc CUItextnumArrow.cc CUIom9.cc MainWindow.cc
-
+# -I/usr/X11R6/include
 ALL             = dtprocess
 RM  = rm -f
 

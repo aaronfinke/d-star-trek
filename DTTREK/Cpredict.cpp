@@ -783,14 +783,14 @@ int Cpredict::nSolveQuadratic(const double fA, const double fB, const double fC,
 
 void Cpredict::vSwap2Values(int* pnInt1, int* pnInt2)
 {
-  register int nTemp;
+  int nTemp;
   nTemp   = *pnInt1;
   *pnInt1 = *pnInt2;
   *pnInt2 = nTemp;
 }
 void Cpredict::vSwap2Values(double* pfFloat1, double* pfFloat2)
 {
-  register double fTemp;
+  double fTemp;
   fTemp     = *pfFloat1;
   *pfFloat1 = *pfFloat2;
   *pfFloat2 = fTemp;
@@ -2371,7 +2371,7 @@ int Cpredict::nSortAxes(void)
 int Cpredict::nGetIndexLargest3D(const double fDC[3])
 {
   int i, j;
-  register double fTemp = fDC[0];
+  double fTemp = fDC[0];
   j = 0;
   for (i = 0; i < 3; i++) {
     if (fTemp < fDC[i]) {

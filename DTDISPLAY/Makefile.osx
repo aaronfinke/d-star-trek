@@ -37,16 +37,20 @@ OPTLEV          = -g
 DTREKINCLUDEDIR = ../DTTREK
 DTREKOBJDIR     = ../DTTREK
 DTREKLIBDIR     = ../DTTREK
+HOMEBREW        = /usr/local
 
 GINCLUDEDIR     =  -I/usr/X11R6/include -I$(MOTIFHOME)/include
 
-C++FLAGS        = -DOSX -Dcplusplus $(OPTLEV) -I$(DTREKINCLUDEDIR) $(GINCLUDEDIR) \
-                  -L$(DTREKLIBDIR) -DFUNCPROTO -DXTFUNCPROTO 
-SLIBS           = $(MOTIFHOME)/lib/libXm.a -lX11 -lXp -lXmu -lXt -lSM -lICE \
-                  -lXext -ldl
-LIBS            = -ldtrek$(OSTYPE) -L. -L/usr/X11R6/lib -L$(MOTIFHOME)/lib \
-                  -L../CBF/lib $(SLIBS) -lm -lmx -bind_at_load -lcbf
+C++FLAGS        = -v -DOSX -Dcplusplus $(OPTLEV) -I$(DTREKINCLUDEDIR) $(GINCLUDEDIR) -I$(HOMEBREW)/include \
+                  -L$(DTREKLIBDIR) -DFUNCPROTO -DXTFUNCPROTO  $(HOMEBREW)/lib/libXm.dylib  $(HOMEBREW)/lib/libXt.dylib \
+				  -fsanitize=address -fno-omit-frame-pointer -std=c++20 \
+ 				  -Werror -Wno-unused-command-line-argument
 
+SLIBS           = $(MOTIFHOME)/lib/libXm.dylib -L$(HOMEBREW)/lib -lX11 -lXp -lXmu -lXt -lSM -lICE \
+                  -lXext -ldl 
+LIBS            = -ldtrek$(OSTYPE) -L. -L/usr/X11R6/lib -L$(MOTIFHOME)/lib \
+                  -L$(CBFHOME)/lib $(SLIBS) -lm -lmx -bind_at_load -lcbf
+# 
 OFILES = main-cc.o UIComponent.o bxutils-cc.o callbacks-cc.o MainWindow.o \
          CXdisplay.o CXcolormap.o CXrubberband.o CXhelp.o CXcursor.o CXprop.o \
 	 CUIom9.o CUIom8.o CUIom2.o CUIimageviewprops.o CUInumberField.o \

@@ -27,7 +27,7 @@ extern "C" {
 
 #define BYTE char
 #define WORD short int
-#define LONG int
+#define LONG long
 
 #define PACKIDENTIFIER "\nCCP4 packed image, X: %04d, Y: %04d\n"
 #define PACKBUFSIZ BUFSIZ

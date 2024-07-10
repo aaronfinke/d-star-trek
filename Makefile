@@ -33,11 +33,11 @@
 # Edit the next lines for your site
 #
 # Directory where OpenMotif is installed.
-MOTIFHOME  := /Applications/OpenMotif21
+MOTIFHOME  := /usr/local/Cellar/openmotif/2.3.8_2
 # Directory where CBF library is located.
-CBFHOME    := $(CURDIR)/CBF
+CBFHOME    := /Users/aaronfinke/CBFlib-0.9.6
 # Directory where PTypes library is located.
-PTYPESHOME := $(CURDIR)/ptypes
+PTYPESHOME := $(CURDIR)/ptypes/ptypes-2.1.1
 
 # Lines below should not need to be modified
 
@@ -52,6 +52,7 @@ ifeq (,$(CBFHOME))
 endif
 
 SHELL := /bin/sh
+#OS    := $(echo osx)
 OS    := $(shell [ "Darwin" == "`uname`" ] && echo osx || echo linux)
 ARCH  := $(shell uname -m)
 
@@ -59,7 +60,7 @@ $(info )
 $(info Operating system is $(OS))
 $(info Architecture is $(ARCH))
 
-OSTYPE_EXT.osx   = darwin11
+OSTYPE_EXT.osx   = darwin
 OSTYPE_EXT.linux = linux
 GMAKE.osx        = /usr/bin/make
 GMAKE.linux      = /usr/bin/gmake
@@ -68,9 +69,12 @@ OSTYPE     = _$(OSTYPE_EXT.$(OS))
 GMAKE      = $(GMAKE.$(OS))
 MFILE      = Makefile.$(OS)
 INSTALLDIR = $(CURDIR)/bin$(OSTYPE)
+HOMEBREW   = /usr/local
 
-CC  = g++
-CXX = g++
+CC  = /usr/local/opt/llvm/bin/clang++
+CXX = /usr/local/opt/llvm/bin/clang++
+# CC  = /usr/local/bin/g++-14
+# CXX = /usr/local/bin/g++-14
 
 $(info )
 $(info Motif directory is $(MOTIFHOME))
@@ -85,6 +89,7 @@ export MOTIFHOME
 export CBFHOME
 export PTYPESHOME
 export INSTALLDIR
+export HOMEBREW
 
 $(info )
 all:

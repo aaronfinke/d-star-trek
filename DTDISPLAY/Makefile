@@ -48,7 +48,7 @@ DTREKOBJDIR     = ../DTTREK
 DTREKLIBDIR     = ../DTTREK
 INSTALLDIR      = ../../bin_irix
 GINCLUDEDIR     = /usr/local/lib/g++-include
-C++FLAGS        = $(OPTLEV) -I$(GINCLUDEDIR) -I$(DTREKINCLUDEDIR) -L$(DTREKLIBDIR) -DFUNCPROTO -DXTFUNCPROTO 
+C++FLAGS        = $(OPTLEV) -I$(GINCLUDEDIR) -I$(DTREKINCLUDEDIR) -L$(DTREKLIBDIR) -DFUNCPROTO -DXTFUNCPROTO -fsanitize=address -fno-omit-frame-pointer
 ###-DUSE_OLD_ERROR_BITS
 LIBS            = -ldtrek$(OSTYPE) -lXm -lXt -lX11 -lPW -lm
 

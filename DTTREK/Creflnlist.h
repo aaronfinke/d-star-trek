@@ -128,7 +128,8 @@ typedef struct _tagSTRATEGY_REFLN_OVERLAP_CHECK
     bool bParseInput(Cstring& sArgs)
     {
         std::vector<double>     aParams;
-        sArgs.nListToVector(aParams, " ");
+        std::string c = " ";
+        sArgs.nListToVector(aParams,*c.c_str());
         int     nParamsCount = (int)aParams.size();
                                                                     
         switch( nParamsCount )

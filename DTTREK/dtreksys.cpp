@@ -629,7 +629,7 @@ int nFileAppendVersion(const Cstring& rsFilename, const bool bCheckEnv)
   // This is because we randomly get shell error
 
   nStat              = 1;
-  register int i     = 0;
+  int i     = 0;
   while ( (10 > i) && (0 != nStat) )
     {
       nStat = nFileRename(rsFilename, sFilename);
@@ -726,7 +726,7 @@ Cstring sFileGetDirectory(const Cstring& rsFilename)
 
   // Look for the first /, ] or : starting from last character in the filename
 
-  register int i;
+  int i;
   for (i = sDir.length()-1; i >= 0; i--)
     {
       if (   ('/' == sDir.GetAt(i)) || (']' == sDir.GetAt(i))
@@ -765,7 +765,7 @@ Cstring sFileGetExtension(const Cstring& rsFilename)
   // Look for the FIRST . starting from last character in the filename
   // If a . is not found, return empty string
 
-  register int i;
+  int i;
   for (i = sFilename.length()-1; i >= 0; i--)
     {
       if ('.' == sFilename.GetAt(i))
@@ -786,7 +786,7 @@ Cstring sFileGetBasename(const Cstring& rsFilename)
 
   // Look for the first /, ] or : starting from last character in the filename
 
-  register int i;
+  int i;
   for (i = sDir.length()-1; i >= 0; i--)
     {
       if (   ('/' == sDir.GetAt(i)) ||  (']' == sDir.GetAt(i))

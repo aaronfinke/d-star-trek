@@ -832,7 +832,7 @@ RETURNS
 */
 void freeargv(char **vector)
 {
-  register char **scan;
+  char **scan;
 
   if (vector != NULL)
   {

@@ -1220,7 +1220,7 @@ int Cimage::nRead(const Cstring& sName)
                 }
               m_pnOverflowOffset = new int   [m_nOverflowCount];
               m_pfOverflowValue  = new float [m_nOverflowCount];
-              register int i;
+              int i;
               for (i = 0; i < m_nOverflowCount; i++)
                 {
                   m_pnOverflowOffset[i] = 0;
@@ -1249,8 +1249,8 @@ int Cimage::nRead(const Cstring& sName)
       m_fCompressInfo[1] = 32768.0;
 
       unsigned short int *puiTemp, iC0, iC1;
-      register int i;
-      register int k;
+      int i;
+      int k;
       float fTemp;
 
       iC0 = (short int) m_fCompressInfo[0];
@@ -1366,7 +1366,7 @@ int Cimage::nRead(const Cstring& sName)
                   }
                 m_pnOverflowOffset = new int   [m_nOverflowCount];
                 m_pfOverflowValue  = new float [m_nOverflowCount];
-                register int i;
+                int i;
                 for (i = 0; i < m_nOverflowCount; i++)
                   {
                     m_pnOverflowOffset[i] = 0;
@@ -1387,7 +1387,7 @@ int Cimage::nRead(const Cstring& sName)
 
       // Place overload values into image if value will fit in unsigned short
 
-      register int i;
+      int i;
       for (i = 0; i < m_nOverflowCount; i++)
         {
           if (65535.0 > m_pfOverflowValue[i])
@@ -1405,7 +1405,7 @@ int Cimage::nRead(const Cstring& sName)
         {
           if (0.0 == m_pfOverflowValue[i])
             {
-              register int j;
+              int j;
               for (j = i; j < m_nOverflowCount-1; j++)
                 {
                   m_pfOverflowValue[j]  = m_pfOverflowValue[j+1];
@@ -1439,7 +1439,7 @@ int Cimage::nRead(const Cstring& sName)
           m_fCompressInfo[1] = 32768.0;
 
           unsigned short int *puiTemp, iC0, iC1;
-          register int k;
+          int k;
           float fTemp;
 
           iC0 = (short int) m_fCompressInfo[0];
@@ -3128,14 +3128,14 @@ Cimage::fGetSiemensPixel(const int nWhere0, const int nWhere1)
 #endif
 
   unsigned short int uiTemp;
-  register int nOffset;
+  int nOffset;
   //float fTemp;
   nOffset = nWhere1 * m_nDim[0] + nWhere0;
   uiTemp =  *(m_The_Data.pui + nOffset);
 
   if (65535 == uiTemp)
     {
-      register int i;
+      int i;
       for (i = 0; i < m_nOverflowCount; i++)
         {
           if (m_pnOverflowOffset[i] == nOffset)

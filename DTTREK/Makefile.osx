@@ -40,7 +40,8 @@ SHELL	   =	/bin/sh
 OPTLEV     =    -O1 -g
 #OPTLEV     =    -g
 #OPTLEV     =    -pg
-##OPTLEV     =    -O2 -DUSE_OLD_ERROR_BITS
+##OPTLEV     =    -O2 -
+HOMEBREW   = /usr/local
 
 #############################################################################
 
@@ -92,10 +93,18 @@ ANL_LIBS    =
 
 CCFLAGS	   = -DOSX -DBINARY_NOT_BIN \
               $(OPTLEV) $(CCDEFS) -I. -I../DTDISPLAY \
+			  	  -I$(HOMEBREW)/include \
 				  -I$(PTYPESHOME)/include \
 				  -I$(CBFHOME)/include \
+				  -I/usr/local/Cellar/hdf5@1.8/1.8.23/include \
 				  -L../DTDISPLAY -L. -L$(PTYPESHOME)/lib \
-				  -L$(CBFHOME)/lib
+				  -L$(CBFHOME)/lib \
+				  -L$(HOMEBREW)/lib \
+				  -L/usr/local/Cellar/hdf5@1.8/1.8.23/lib \
+				  -Wno-deprecated \
+				  -fsanitize=address -fno-omit-frame-pointer \
+				  -std=c++20
+
 
 #CCFLAGSOPT   =	-O0 -g $(CCDEFS) -I. -I../DTDISPLAY \
 #		-L/usr/local/lib -L../DTDISPLAY -L.

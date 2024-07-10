@@ -635,7 +635,7 @@ MainWindow::~MainWindow()
       m_poXprop = NULL;
     }
 
-  register int i;
+  int i;
   for (i = 0; i < m_nNumRows; i++)
     {
       delete m_pptTextRow[i];
@@ -764,7 +764,7 @@ void MainWindow::create(Widget parent)
 #endif
     
     //
-    // Register the converters for the widgets.
+    // the converters for the widgets.
     //
     RegisterBxConverters(XtWidgetToApplicationContext(parent));
     XtInitializeWidgetClass((WidgetClass)xmMainWindowWidgetClass);

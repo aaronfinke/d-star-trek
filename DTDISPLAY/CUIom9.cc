@@ -647,6 +647,9 @@ CUIom9::vSetLabel(const char *pcNewLabel, char *pcNewColor)
 #endif
 			  &pcString);
 	  XmStringFree(sxString);
+    std::cout << "pcstring " << pcString << std::endl;
+    std::cout << "pcNewLabel " << pcNewLabel << std::endl;
+
 	  nMatch = strcmp(pcNewLabel, pcString);
 	  if (0 == nMatch)
 	    {

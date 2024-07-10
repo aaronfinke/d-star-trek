@@ -215,7 +215,7 @@ void C3DdataOutput::vInit() {
 void
 C3DdataOutput::vGetCentroid(float *pfCentroid)
 {
-  register int i;
+  int i;
   for (i = 0; i < 3; i++)
     {
       pfCentroid[i] = m_a3fCentroid[i];
@@ -226,7 +226,7 @@ C3DdataOutput::vGetCentroid(float *pfCentroid)
 void
 C3DdataOutput::vGetPeakSize(float *pfSize)
 {
-  register int i;
+  int i;
   for (i = 0; i < 3; i++)
     {
       pfSize[i] = m_a3fPeakSize[i];
@@ -1479,7 +1479,7 @@ C3Ddata::vFreeInit(void)
     ms_ppfFreeFloat = new float* [C3DDATA_MAX_FREE];
 
 
-  register int i;
+  int i;
   for (i = 0; i < C3DDATA_MAX_FREE; i++)
     {
       ms_pnFreeSize[i]    = 0;
@@ -1497,7 +1497,7 @@ C3Ddata::vFreeDelete(void)
 
   if (NULL != ms_ppfFreeFloat)
     {
-      register int i;
+      int i;
       for (i = 0; i < ms_nFreeCount; i++)
 	{
 	  if (NULL != ms_ppfFreeFloat[i])
