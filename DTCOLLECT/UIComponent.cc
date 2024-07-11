@@ -174,7 +174,7 @@ void UIComponent::setDefaultResources ( const Widget w,
    {
        char buf[1000];
 
-       sprintf(buf, "*%s%s", _name, resourceSpec[i++]);
+       snprintf(buf, sizeof(buf), "*%s%s", _name, resourceSpec[i++]);
        XrmPutLineResource( &rdb, buf );
    }
 
@@ -287,7 +287,7 @@ UIComponent::setAppDefaults(const Widget w,
        if (wclass == applicationShellWidgetClass) break;
 
        strcpy(buf, lineage);
-       sprintf(lineage, "*%s%s", XtName(parent), buf);
+       snprintf(lineage, sizeof(lineage), "*%s%s", XtName(parent), buf);
 
        parent = XtParent(parent);
    }
@@ -312,24 +312,24 @@ UIComponent::setAppDefaults(const Widget w,
 
 	   if (*defs->cInstName != '\0')
 	   {
-	       sprintf(buf, "%s*%s*%s.%s: %s",
+	       snprintf(buf, sizeof(buf), "%s*%s*%s.%s: %s",
 		       lineage, defs->wName, defs->cInstName, defs->wRsc,
 		       defs->value);
 	   }
 	   else
 	   {
-	       sprintf(buf, "%s*%s.%s: %s",
+	       snprintf(buf, sizeof(buf), "%s*%s.%s: %s",
 		       lineage, defs->wName, defs->wRsc, defs->value);
 	   }
        }
        else if (*defs->wName != '\0')
        {
-	   sprintf(buf, "%s*%s*%s.%s: %s",
+	   snprintf(buf, sizeof(buf), "%s*%s*%s.%s: %s",
 		   lineage, inst_name, defs->wName, defs->wRsc, defs->value);
        }
        else
        {
-	   sprintf(buf, "%s*%s.%s: %s",
+	   snprintf(buf, sizeof(buf), "%s*%s.%s: %s",
 		   lineage, inst_name, defs->wRsc, defs->value);
        }
 

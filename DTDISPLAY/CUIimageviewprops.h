@@ -87,7 +87,7 @@ typedef struct _tagImageProps
   float fRotStart;
   float fRotEnd;
   float fExpTime;
-  float fBorder;
+  double fBorder;
   float fScaleMin;
   float fScaleMax;
   float fImageMin;

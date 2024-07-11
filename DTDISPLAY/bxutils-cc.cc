@@ -998,7 +998,7 @@ static int getCStrCount
     if (!str) return(0);
     if (!*str) return(0);
 
-    while (newStr = getNextCStrDelim(str))
+    while ((newStr = getNextCStrDelim(str)))
     {
 	x++;
 	str = ++newStr;
@@ -1024,10 +1024,14 @@ static wchar_t *CStrCommonWideCharsGet()
      * the TYPEDEFS and DEFINES section above to correspond to this
      * array.
      */
-    static char	*characters[] = { "\000", "\t", "\n", "\r", "\f", "\v",
+    static const char	*characters_x[] = { "\000", "\t", "\n", "\r", "\f", "\v",
 				  "\\", "\"", "#", ":", "f", "l", "n", "r",
 				  "t", "v", "F", "L", "R", "T", "0", "1" };
-	
+	static char *characters[sizeof(characters_x)/sizeof(characters_x)[0]];
+
+    for ( int i = 0; i < sizeof(characters_x)/sizeof(characters_x)[0]; i++ ) {
+        characters[i] = (char*) characters_x[i];
+    }
 
     if (CommonWideChars == NULL)
     {
@@ -1182,7 +1186,7 @@ static Boolean CvtStringToXmStringTable
      */
     if (!(str = (char*)fromVal->addr))
     {
-	str = "";
+	str = (char*)"";
     }
 
     /*
@@ -1646,7 +1650,7 @@ Widget BxFindTopShell
 {
     Widget	p;
     
-    while(p = XtParent(start))
+    while((p = XtParent(start)))
     {
 	start = p;
     }
@@ -1754,7 +1758,7 @@ WidgetList BxWidgetIdsFromNames
 	 * Form a string to use with XtNameToWidget().
 	 */
         widget = (char *)XtMalloc((strlen(start) + 2) * sizeof(char));
-        sprintf(widget, "*%s", start);
+        snprintf(widget, sizeof(widget), "*%s", start);
 	
 	/*
 	 * Start at this level and continue up until the widget is found 
@@ -2025,11 +2029,11 @@ typedef struct {
 
 char *BxXpmColorKeys[] =
 {
- "s",					/* key #1: symbol */
- "m",					/* key #2: mono visual */
- "g4",					/* key #3: 4 grays visual */
- "g",					/* key #4: gray visual */
- "c",					/* key #5: color visual */
+ (char*)"s",					/* key #1: symbol */
+ (char*)"m",					/* key #2: mono visual */
+ (char*)"g4",					/* key #3: 4 grays visual */
+ (char*)"g",					/* key #4: gray visual */
+ (char*)"c",					/* key #5: color visual */
 };
 
 /* XPM private routines */
@@ -2416,7 +2420,7 @@ GRA(BxXpmAttributes *, attributes)
 	 */
 	curkey = 0;
 	lastwaskey = 0;
-	while (l = xpmNextWord(data, buf)) {
+	while ((l = xpmNextWord(data, buf))) {
 	    if (!lastwaskey) {
 		for (key = 1; key < BXNKEYS + 1; key++)
 		    if ((strlen(BxXpmColorKeys[key - 1]) == l)
@@ -2536,7 +2540,7 @@ GRA(unsigned int *, mask_pixel_index)
 {
     XColor xcolor;
 
-    if (STRCASECMP(colorname, BX_TRANSPARENT_COLOR)) {
+    if (STRCASECMP(colorname, (char*) BX_TRANSPARENT_COLOR)) {
 	if (!XParseColor(display, colormap, colorname, &xcolor)
 	    || (!XAllocColor(display, colormap, &xcolor)))
 	    return (1);

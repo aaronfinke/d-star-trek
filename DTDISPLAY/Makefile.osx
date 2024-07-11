@@ -44,7 +44,7 @@ GINCLUDEDIR     =  -I/usr/X11R6/include -I$(MOTIFHOME)/include
 C++FLAGS        = -v -DOSX -Dcplusplus $(OPTLEV) -I$(DTREKINCLUDEDIR) $(GINCLUDEDIR) -I$(HOMEBREW)/include \
                   -L$(DTREKLIBDIR) -DFUNCPROTO -DXTFUNCPROTO  $(HOMEBREW)/lib/libXm.dylib  $(HOMEBREW)/lib/libXt.dylib \
 				  -fsanitize=address -fno-omit-frame-pointer -std=c++20 \
- 				  -Werror -Wno-unused-command-line-argument
+ 				  -Wno-unused-command-line-argument -Wno-int-to-pointer-cast
 
 SLIBS           = $(MOTIFHOME)/lib/libXm.dylib -L$(HOMEBREW)/lib -lX11 -lXp -lXmu -lXt -lSM -lICE \
                   -lXext -ldl 

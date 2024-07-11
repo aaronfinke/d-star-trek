@@ -215,7 +215,7 @@ DTREK_WIN_DLL_DATA_EXPORT  static Cstring ms_asErrorsNames[nMaxErrorStatusTypes]
 
 };  // end of class Crefln
 
-typedef struct
+typedef struct REFLN_EXTRA_INFO
 {
 	void vInitialize()
 	{

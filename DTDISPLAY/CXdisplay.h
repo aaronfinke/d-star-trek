@@ -84,7 +84,7 @@
 
 typedef struct _tagImagePropsDisplay
 {
-  float fZoom;
+  double fZoom;
   float fScaleMin;
   float fScaleMax;
   float fScaleMinSD;

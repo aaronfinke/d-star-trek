@@ -119,8 +119,8 @@ Cstring CXhelp::ms_sSeparator    = "$$";
 XtResource CXhelp::m_hHelpResources[] =
 {
   {
-    "helpLine",                             // Name of resource
-    "HelpLine",                             // Class of resource
+    strdup("helpLine"),                             // Name of resource
+    strdup("HelpLine"),                             // Class of resource
     XmRString,                              // Required type
     sizeof(char *),                         // Size of expected type
     XtOffset(tagHelpResource*, pcHelpLine), // Destination address
@@ -128,8 +128,8 @@ XtResource CXhelp::m_hHelpResources[] =
     (XtPointer) ""                          // Default value
   },
   {
-    "helpHTML",                             // Name of resource
-    "HelpHTML",                             // Class of resource
+    strdup("helpHTML"),                             // Name of resource
+    strdup("HelpHTML"),                             // Class of resource
     XmRString,                              // Required type
     sizeof(char *),                         // Size of expected type
     XtOffset(tagHelpResource*, pcHelpHTML), // Destination address
@@ -141,11 +141,11 @@ XtResource CXhelp::m_hHelpResources[] =
 XtActionsRec CXhelp::m_hHelpActions[] =
 {
   {
-    "vPostHelp",
+   strdup("vPostHelp"),
     vPostHelp
   },
   {
-    "vUnPostHelp",
+    strdup("vUnPostHelp"),
     vUnPostHelp
   }
 };
@@ -433,12 +433,12 @@ CXhelp::vHTMLHelp(Widget w, XtPointer clientData, XtPointer callData)
       // automatically load and view the file specified by the filename.
 
       char cCommand[255];
-      sprintf(cCommand, "%sMosaic.%d", m_sTmpDirectory.string(), nPID);
+      snprintf(cCommand, sizeof(cCommand), "%sMosaic.%d", m_sTmpDirectory.string(), nPID);
       fp = fopen(cCommand, "w");
       if (!fp) return;
       fprintf( fp,"goto\n%s\n", sTemp.string());
       fclose( fp );
-      sprintf(cCommand,"kill -USR1 %d", nPID);
+      snprintf(cCommand, sizeof(cCommand), "kill -USR1 %d", nPID);
       nDoSystemCommand((Cstring)cCommand);
     }
   else if (0 <= m_sHTMLViewer.find("netscape"))

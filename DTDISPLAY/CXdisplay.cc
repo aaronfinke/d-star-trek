@@ -1996,11 +1996,11 @@ CXdisplay::vPixelInfo(const int nXIn, const int nYIn, const int nInfoMode,
       char cTemp[20];
 
       if (!m_bHasFloatValues)
-	sprintf(cTemp, "%.1f, %.1f, %.0f", fPx0, fPx1, fValue);
+	snprintf(cTemp, sizeof(cTemp), "%.1f, %.1f, %.0f", fPx0, fPx1, fValue);
       else if (fValue < 10.0f)
-	sprintf(cTemp, "%.1f, %.1f, %.4f", fPx0, fPx1, fValue);
+	snprintf(cTemp, sizeof(cTemp), "%.1f, %.1f, %.4f", fPx0, fPx1, fValue);
       else
-	sprintf(cTemp, "%.1f, %.1f, %.0f", fPx0, fPx1, fValue);
+	snprintf(cTemp, sizeof(cTemp), "%.1f, %.1f, %.0f", fPx0, fPx1, fValue);
 
       nTextLen = strlen(cTemp);
       
@@ -2757,11 +2757,11 @@ CXdisplay::vPlotPixelValues(void)
 		}
 //+JWP 2009-01-08
 	      if (!m_bHasFloatValues)
-		nLen = sprintf(cText, "%.0f", fValue);
+		nLen = snprintf(cText, sizeof(cText), "%.0f", fValue);
 	      else if (fValue >= 10.0f)
-		nLen = sprintf(cText, "%.0f", fValue);
+		nLen = snprintf(cText, sizeof(cText), "%.0f", fValue);
 	      else
-		nLen = sprintf(cText, "%.4f", fValue);
+		nLen = snprintf(cText, sizeof(cText), "%.4f", fValue);
 //-JWP 2009-01-08
 	      if (0 == nStat)
 		{
@@ -2956,7 +2956,7 @@ CXdisplay::nCreatePS(const Cstring& sPSFile, const Cstring& sComment,
 
 		  nTemp = a256nIndex[*pucTemp++];
 
-		  sprintf(a3cTemp, "%02X", nTemp);
+		  snprintf(a3cTemp, sizeof(a3cTemp), "%02X", nTemp);
 		  oOut << a3cTemp;
 		  if (39 == i % 40)
 		    oOut << "\n";
@@ -3013,7 +3013,7 @@ CXdisplay::nCreatePS(const Cstring& sPSFile, const Cstring& sComment,
 //		      cout << "Warning! 255 < nTemp in CreatePS!\n";
 		      nTemp = 255;
 		    }
-		  sprintf(a3cTemp, "%02X", nTemp);
+		  snprintf(a3cTemp, sizeof(a3cTemp), "%02X", nTemp);
 		  oOut << a3cTemp;
 		  if (39 == i % 40)
 		    oOut << "\n";
@@ -3163,13 +3163,13 @@ CXdisplay::vDrawProfile(const int nXIn, const int nYIn, const int nInfoMode)
 
 	  // Draw min and max values on the plot if there is room
 
-	  nLen        = sprintf(cText, "%.0f", fMax);
+	  nLen        = snprintf(cText, sizeof(cText), "%.0f", fMax);
 	  nTextWidth  = XTextWidth(m_pXFont, cText, nLen);
 	  nPx0        = m_nWidthUsed+1;
 	  nPx1        = nTextHeight;
 	  XDrawString(XtDisplay(m_hParent), XtWindow(m_hParent), m_hGCtext,
 		      nPx0, nPx1, cText, nLen);
-	  nLen        = sprintf(cText, "%.0f", fMin);
+	  nLen        = snprintf(cText, sizeof(cText), "%.0f", fMin);
 	  nTextWidth  = XTextWidth(m_pXFont, cText, nLen);
 	  nPx0        = m_nWidth - nTextWidth;
 	  nPx1        = nTextHeight + nTextHeight;
@@ -3219,13 +3219,13 @@ CXdisplay::vDrawProfile(const int nXIn, const int nYIn, const int nInfoMode)
 	    {
 	      // Draw min and max values on the plot if there is room
 
-	      nLen        = sprintf(cText, "%.0f", fMin);
+	      nLen        = snprintf(cText, sizeof(cText), "%.0f", fMin);
 	      nTextWidth  = XTextWidth(m_pXFont, cText, nLen);
 	      nPx0        = 0;
 	      nPx1        = m_nHeight;
 	      XDrawString(XtDisplay(m_hParent), XtWindow(m_hParent), m_hGCtext,
 			  nPx0, nPx1, cText, nLen);
-	      nLen        = sprintf(cText, "%.0f", fMax);
+	      nLen        = snprintf(cText, sizeof(cText), "%.0f", fMax);
 	      nTextWidth  = XTextWidth(m_pXFont, cText, nLen);
 	      nPx0        = 0;
 	      nPx1        = m_nHeightUsed + nTextHeight;
@@ -3330,21 +3330,21 @@ CXdisplay::vDrawProfile(const int nXIn, const int nYIn, const int nInfoMode)
 	    {
 	      // Draw min and max values on the plot if there is room
 
-	      nLen        = sprintf(cText, "%.0f", fMin);
+	      nLen        = snprintf(cText, sizeof(cText), "%.0f", fMin);
 	      nTextWidth  = XTextWidth(m_pXFont, cText, nLen);
 	      nPx0        = m_nWidth - nTextWidth;
 	      nPx1        = m_nHeight;
 	      XDrawString(XtDisplay(m_hParent), XtWindow(m_hParent), m_hGCtext,
 			  nPx0, nPx1, cText, nLen);
 
-	      nLen        = sprintf(cText, "%.0f", fMax);
+	      nLen        = snprintf(cText, sizeof(cText), "%.0f", fMax);
 	      nTextWidth  = XTextWidth(m_pXFont, cText, nLen);
 	      nPx0        = m_nWidth - nTextWidth;
 	      nPx1        = m_nHeightUsed + nTextHeight;
 	      XDrawString(XtDisplay(m_hParent), XtWindow(m_hParent), m_hGCtext,
 			  nPx0, nPx1, cText, nLen);
 
-	      nLen        = sprintf(cText, "Rock.", fMin);
+	      nLen        = snprintf(cText, sizeof(cText), "Rock."/*,fMin*/);
 	      nTextWidth  = XTextWidth(m_pXFont, cText, nLen);
 	      nPx0        = (m_nWidthUsed + m_nWidth - nTextWidth)/2 ;
 	      nPx1        = m_nHeight;
@@ -3381,7 +3381,7 @@ CXdisplay::vPan(const int nX, const int nY)
 	  nDelY = (int) (m_fPx1Prev - fPx1) + m_tImageProps.nOrig[1];
 
 	  int nStatSR = 0;
-	  nStatSR == nSetRegion(nDelX, nDelY, m_tImageProps.nExt[0],
+	  nStatSR = nSetRegion(nDelX, nDelY, m_tImageProps.nExt[0],
 				m_tImageProps.nExt[1]);
 	    if (0 == nStatSR)
 	    {
@@ -3765,7 +3765,7 @@ CXdisplay::vDrawColorScale(const int nMode, const int nX, const int nY)
 		       a3hPoints, 3, Convex, CoordModeOrigin);
 
 	}
-      nLen = sprintf(cText, "%.0f", m_fScaleMin);
+      nLen = snprintf(cText, sizeof(cText), "%.0f", m_fScaleMin);
       nTextWidth  = XTextWidth(m_pXFont, cText, nLen);      
       m_hGCValues.foreground = m_poColormap->ulGetColorIndex("black");
       XChangeGC(XtDisplay(m_hParent), m_hGCtext, GCForeground,
@@ -3791,7 +3791,7 @@ CXdisplay::vDrawColorScale(const int nMode, const int nX, const int nY)
 	  XFillPolygon(XtDisplay(m_hParent),  XtWindow(m_hParent), m_hGCtext,
 		       a3hPoints, 3, Convex, CoordModeOrigin);
 	}
-      nLen        = sprintf(cText, "%.0f", m_fScaleMax);
+      nLen        = snprintf(cText, sizeof(cText), "%.0f", m_fScaleMax);
       nTextWidth  = XTextWidth(m_pXFont, cText, nLen);      
       m_hGCValues.foreground = m_ulColorWhite;
       XChangeGC(XtDisplay(m_hParent), m_hGCtext, GCFunction | GCForeground,
@@ -4774,7 +4774,7 @@ CXdisplay::vDrawResol(void)
 		  if (0.0 != fValue)
 		    { 
 		      fValue = m_fWavelength / fValue;
-		      sprintf(cTemp, " %.2f", fValue);
+		      snprintf(cTemp, sizeof(cTemp), " %.2f", fValue);
 		      int nTextLen = strlen(cTemp);
 		      //printf("Reso calc: %.2f\n", fValue);
 		      XDrawString(XtDisplay(m_hParent), m_hPixmap, m_hGCtext,

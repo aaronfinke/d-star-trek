@@ -506,7 +506,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 416); ac++;
     XtSetArg(args[ac], XmNheight, 216); ac++;
     _mbError = XmCreateMessageBox(_xmDialogShell9,
-        "mbError",
+        (char*)"mbError",
         args, 
         ac);
     
@@ -533,7 +533,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 378); ac++;
     XtSetArg(args[ac], XmNheight, 202); ac++;
     _mbProgress = XmCreateMessageBox(_xmDialogShell8,
-        "mbProgress",
+        (char*)"mbProgress",
         args, 
         ac);
     _clientDataStructs[cdc].object = this;
@@ -551,7 +551,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 356); ac++;
     XtSetArg(args[ac], XmNheight, 74); ac++;
     _fmProgress = XmCreateForm(_mbProgress,
-        "fmProgress",
+        (char*)"fmProgress",
         args, 
         ac);
     XtManageChild(_fmProgress);
@@ -565,7 +565,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 356); ac++;
     XtSetArg(args[ac], XmNheight, 70); ac++;
     _scProgress = XmCreateScale(_fmProgress,
-        "scProgress",
+        (char*)"scProgress",
         args, 
         ac);
     XtManageChild(_scProgress);
@@ -615,7 +615,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 636); ac++;
     XtSetArg(args[ac], XmNheight, 308); ac++;
     _fmViewHeader = XmCreateForm(_xmDialogShell4,
-        "fmViewHeader",
+        (char*)"fmViewHeader",
         args, 
         ac);
     
@@ -625,7 +625,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 100); ac++;
     XtSetArg(args[ac], XmNheight, 40); ac++;
     _pbViewHeaderDismiss = XmCreatePushButton(_fmViewHeader,
-        "pbViewHeaderDismiss",
+        (char*)"pbViewHeaderDismiss",
         args, 
         ac);
     XtManageChild(_pbViewHeaderDismiss);
@@ -636,7 +636,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 615); ac++;
     XtSetArg(args[ac], XmNheight, 20); ac++;
     _spViewHeader = XmCreateSeparator(_fmViewHeader,
-        "spViewHeader",
+        (char*)"spViewHeader",
         args, 
         ac);
     XtManageChild(_spViewHeader);
@@ -648,7 +648,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 636); ac++;
     XtSetArg(args[ac], XmNheight, 227); ac++;
     _swViewHeader = XmCreateScrolledWindow(_fmViewHeader,
-        "swViewHeader",
+        (char*)"swViewHeader",
         args, 
         ac);
     XtManageChild(_swViewHeader);
@@ -656,7 +656,7 @@ void MainWindow::create(Widget parent)
     ac = 0;
     XtSetArg(args[ac], XmNeditMode, XmMULTI_LINE_EDIT); ac++;
     _tfViewHeader = XmCreateText(_swViewHeader,
-        "tfViewHeader",
+        (char*)"tfViewHeader",
         args, 
         ac);
     XtManageChild(_tfViewHeader);
@@ -676,7 +676,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 966); ac++;
     XtSetArg(args[ac], XmNheight, 594); ac++;
     _mbViewZoomPan = XmCreateMessageBox(_xmDialogShell3,
-        "mbViewZoomPan",
+        (char*)"mbViewZoomPan",
         args, 
         ac);
     _clientDataStructs[cdc].object = this;
@@ -714,7 +714,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 1021); ac++;
     XtSetArg(args[ac], XmNheight, 35); ac++;
     _menuBar = XmCreateMenuBar(_MainWindow,
-        "menuBar",
+        (char*)"menuBar",
         args, 
         ac);
     XtManageChild(_menuBar);
@@ -725,7 +725,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 64); ac++;
     XtSetArg(args[ac], XmNheight, 25); ac++;
     _cbFile = XmCreateCascadeButton(_menuBar,
-        "cbFile",
+        (char*)"cbFile",
         args, 
         ac);
     XtManageChild(_cbFile);
@@ -736,13 +736,13 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 261); ac++;
     XtSetArg(args[ac], XmNheight, 305); ac++;
     _pmFile = XmCreatePulldownMenu(XtParent(_cbFile),
-        "pmFile",
+        (char*)"pmFile",
         args, 
         ac);
     
     ac = 0;
     _cbFileNew = XmCreateCascadeButton(_pmFile,
-        "cbFileNew",
+        (char*)"cbFileNew",
         args, 
         ac);
     XtManageChild(_cbFileNew);
@@ -753,13 +753,13 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 170); ac++;
     XtSetArg(args[ac], XmNheight, 222); ac++;
     _pmFileNew = XmCreatePulldownMenu(XtParent(_cbFileNew),
-        "pmFileNew",
+        (char*)"pmFileNew",
         args, 
         ac);
     
     ac = 0;
     _pbFileNewImage = XmCreatePushButton(_pmFileNew,
-        "pbFileNewImage",
+        (char*)"pbFileNewImage",
         args, 
         ac);
     XtManageChild(_pbFileNewImage);
@@ -788,7 +788,7 @@ void MainWindow::create(Widget parent)
     ac = 0;
     XtSetArg(args[ac], XmNsensitive, False); ac++;
     _pbFileNewScan = XmCreatePushButton(_pmFileNew,
-        "pbFileNewScan",
+        (char*)"pbFileNewScan",
         args, 
         ac);
     XtManageChild(_pbFileNewScan);
@@ -809,7 +809,7 @@ void MainWindow::create(Widget parent)
     
     ac = 0;
     _spFileNew1 = XmCreateSeparator(_pmFileNew,
-        "spFileNew1",
+        (char*)"spFileNew1",
         args, 
         ac);
     XtManageChild(_spFileNew1);
@@ -817,7 +817,7 @@ void MainWindow::create(Widget parent)
     ac = 0;
     XtSetArg(args[ac], XmNsensitive, True); ac++;
     _pbFileNewOverlay = XmCreatePushButton(_pmFileNew,
-        "pbFileNewOverlay",
+        (char*)"pbFileNewOverlay",
         args, 
         ac);
     XtManageChild(_pbFileNewOverlay);
@@ -846,7 +846,7 @@ void MainWindow::create(Widget parent)
     ac = 0;
     XtSetArg(args[ac], XmNsensitive, True); ac++;
     _pbFileNewTile = XmCreatePushButton(_pmFileNew,
-        "pbFileNewTile",
+        (char*)"pbFileNewTile",
         args, 
         ac);
     XtManageChild(_pbFileNewTile);
@@ -874,7 +874,7 @@ void MainWindow::create(Widget parent)
     
     ac = 0;
     _pbFileNewUnderlay = XmCreatePushButton(_pmFileNew,
-        "pbFileNewUnderlay",
+        (char*)"pbFileNewUnderlay",
         args, 
         ac);
     XtManageChild(_pbFileNewUnderlay);
@@ -902,7 +902,7 @@ void MainWindow::create(Widget parent)
     
     ac = 0;
     _pbFileNewMovie = XmCreatePushButton(_pmFileNew,
-        "pbFileNewMovie",
+        (char*)"pbFileNewMovie",
         args, 
         ac);
     XtManageChild(_pbFileNewMovie);
@@ -931,7 +931,7 @@ void MainWindow::create(Widget parent)
     ac = 0;
     XtSetArg(args[ac], XmNsensitive, True); ac++;
     _pbFileNewAverage = XmCreatePushButton(_pmFileNew,
-        "pbFileNewAverage",
+        (char*)"pbFileNewAverage",
         args, 
         ac);
     XtManageChild(_pbFileNewAverage);
@@ -960,7 +960,7 @@ void MainWindow::create(Widget parent)
     ac = 0;
     XtSetArg(args[ac], XmNsensitive, False); ac++;
     _pbFileNewStats = XmCreatePushButton(_pmFileNew,
-        "pbFileNewStats",
+        (char*)"pbFileNewStats",
         args, 
         ac);
     XtManageChild(_pbFileNewStats);
@@ -992,7 +992,7 @@ void MainWindow::create(Widget parent)
     
     ac = 0;
     _pbFileOpen = XmCreatePushButton(_pmFile,
-        "pbFileOpen",
+        (char*)"pbFileOpen",
         args, 
         ac);
     XtManageChild(_pbFileOpen);
@@ -1021,7 +1021,7 @@ void MainWindow::create(Widget parent)
     ac = 0;
     XtSetArg(args[ac], XmNsensitive, True); ac++;
     _pbFileSaveAs = XmCreatePushButton(_pmFile,
-        "pbFileSaveAs",
+        (char*)"pbFileSaveAs",
         args, 
         ac);
     XtManageChild(_pbFileSaveAs);
@@ -1050,7 +1050,7 @@ void MainWindow::create(Widget parent)
     ac = 0;
     XtSetArg(args[ac], XmNsensitive, True); ac++;
     _pbFileSaveHeader = XmCreatePushButton(_pmFile,
-        "pbFileSaveHeader",
+        (char*)"pbFileSaveHeader",
         args, 
         ac);
     XtManageChild(_pbFileSaveHeader);
@@ -1078,7 +1078,7 @@ void MainWindow::create(Widget parent)
     
     ac = 0;
     _pbFileTemplate = XmCreatePushButton(_pmFile,
-        "pbFileTemplate",
+        (char*)"pbFileTemplate",
         args, 
         ac);
     XtManageChild(_pbFileTemplate);
@@ -1106,7 +1106,7 @@ void MainWindow::create(Widget parent)
     
     ac = 0;
     _spFile4 = XmCreateSeparator(_pmFile,
-        "spFile4",
+        (char*)"spFile4",
         args, 
         ac);
     XtManageChild(_spFile4);
@@ -1114,7 +1114,7 @@ void MainWindow::create(Widget parent)
     ac = 0;
     XtSetArg(args[ac], XmNsensitive, True); ac++;
     _pbFileLoad = XmCreatePushButton(_pmFile,
-        "pbFileLoad",
+        (char*)"pbFileLoad",
         args, 
         ac);
     XtManageChild(_pbFileLoad);
@@ -1143,7 +1143,7 @@ void MainWindow::create(Widget parent)
     ac = 0;
     XtSetArg(args[ac], XmNsensitive, True); ac++;
     _pbFileWrite = XmCreatePushButton(_pmFile,
-        "pbFileWrite",
+        (char*)"pbFileWrite",
         args, 
         ac);
     XtManageChild(_pbFileWrite);
@@ -1171,7 +1171,7 @@ void MainWindow::create(Widget parent)
     
     ac = 0;
     _spFile1 = XmCreateSeparator(_pmFile,
-        "spFile1",
+        (char*)"spFile1",
         args, 
         ac);
     XtManageChild(_spFile1);
@@ -1179,7 +1179,7 @@ void MainWindow::create(Widget parent)
     ac = 0;
     XtSetArg(args[ac], XmNsensitive, False); ac++;
     _pbFilePrefer = XmCreatePushButton(_pmFile,
-        "pbFilePrefer",
+        (char*)"pbFilePrefer",
         args, 
         ac);
     XtManageChild(_pbFilePrefer);
@@ -1201,7 +1201,7 @@ void MainWindow::create(Widget parent)
     ac = 0;
     XtSetArg(args[ac], XmNsensitive, True); ac++;
     _pbFilePrint = XmCreatePushButton(_pmFile,
-        "pbFilePrint",
+        (char*)"pbFilePrint",
         args, 
         ac);
     XtManageChild(_pbFilePrint);
@@ -1229,14 +1229,14 @@ void MainWindow::create(Widget parent)
     
     ac = 0;
     _spFile2 = XmCreateSeparator(_pmFile,
-        "spFile2",
+        (char*)"spFile2",
         args, 
         ac);
     XtManageChild(_spFile2);
     
     ac = 0;
     _cbFileListen = XmCreateCascadeButton(_pmFile,
-        "cbFileListen",
+        (char*)"cbFileListen",
         args, 
         ac);
     XtManageChild(_cbFileListen);
@@ -1247,13 +1247,13 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 159); ac++;
     XtSetArg(args[ac], XmNheight, 79); ac++;
     _pmFileListen = XmCreatePulldownMenu(XtParent(_cbFileListen),
-        "pmFileListen",
+        (char*)"pmFileListen",
         args, 
         ac);
     
     ac = 0;
     _tbFileListenIntegrate = XmCreateToggleButton(_pmFileListen,
-        "tbFileListenIntegrate",
+        (char*)"tbFileListenIntegrate",
         args, 
         ac);
     XtManageChild(_tbFileListenIntegrate);
@@ -1281,7 +1281,7 @@ void MainWindow::create(Widget parent)
     
     ac = 0;
     _tbFileListenCollect = XmCreateToggleButton(_pmFileListen,
-        "tbFileListenCollect",
+        (char*)"tbFileListenCollect",
         args, 
         ac);
     XtManageChild(_tbFileListenCollect);
@@ -1309,7 +1309,7 @@ void MainWindow::create(Widget parent)
     
     ac = 0;
     _tbFileListenOther = XmCreateToggleButton(_pmFileListen,
-        "tbFileListenOther",
+        (char*)"tbFileListenOther",
         args, 
         ac);
     XtManageChild(_tbFileListenOther);
@@ -1341,14 +1341,14 @@ void MainWindow::create(Widget parent)
     
     ac = 0;
     _spFile3 = XmCreateSeparator(_pmFile,
-        "spFile3",
+        (char*)"spFile3",
         args, 
         ac);
     XtManageChild(_spFile3);
     
     ac = 0;
     _pbFileExit = XmCreatePushButton(_pmFile,
-        "pbFileExit",
+        (char*)"pbFileExit",
         args, 
         ac);
     XtManageChild(_pbFileExit);
@@ -1384,7 +1384,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 64); ac++;
     XtSetArg(args[ac], XmNheight, 25); ac++;
     _cbEdit = XmCreateCascadeButton(_menuBar,
-        "cbEdit",
+        (char*)"cbEdit",
         args, 
         ac);
     XtManageChild(_cbEdit);
@@ -1395,13 +1395,13 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 315); ac++;
     XtSetArg(args[ac], XmNheight, 193); ac++;
     _pmEdit = XmCreatePulldownMenu(XtParent(_cbEdit),
-        "pmEdit",
+        (char*)"pmEdit",
         args, 
         ac);
     
     ac = 0;
     _pbEditImage = XmCreatePushButton(_pmEdit,
-        "pbEditImage",
+        (char*)"pbEditImage",
         args, 
         ac);
     XtManageChild(_pbEditImage);
@@ -1430,7 +1430,7 @@ void MainWindow::create(Widget parent)
     ac = 0;
     XtSetArg(args[ac], XmNsensitive, True); ac++;
     _pbEditRefln = XmCreatePushButton(_pmEdit,
-        "pbEditRefln",
+        (char*)"pbEditRefln",
         args, 
         ac);
     XtManageChild(_pbEditRefln);
@@ -1458,7 +1458,7 @@ void MainWindow::create(Widget parent)
     
     ac = 0;
     _pbEditClear = XmCreatePushButton(_pmEdit,
-        "pbEditClear",
+        (char*)"pbEditClear",
         args, 
         ac);
     XtManageChild(_pbEditClear);
@@ -1486,7 +1486,7 @@ void MainWindow::create(Widget parent)
     
     ac = 0;
     _pbEditDelRef = XmCreatePushButton(_pmEdit,
-        "pbEditDelRef",
+        (char*)"pbEditDelRef",
         args, 
         ac);
     XtManageChild(_pbEditDelRef);
@@ -1514,14 +1514,14 @@ void MainWindow::create(Widget parent)
     
     ac = 0;
     _spEdit = XmCreateSeparator(_pmEdit,
-        "spEdit",
+        (char*)"spEdit",
         args, 
         ac);
     XtManageChild(_spEdit);
     
     ac = 0;
     _tbEditErase = XmCreateToggleButton(_pmEdit,
-        "tbEditErase",
+        (char*)"tbEditErase",
         args, 
         ac);
     XtManageChild(_tbEditErase);
@@ -1549,7 +1549,7 @@ void MainWindow::create(Widget parent)
     
     ac = 0;
     _pbEditBeam = XmCreatePushButton(_pmEdit,
-        "pbEditBeam",
+        (char*)"pbEditBeam",
         args, 
         ac);
     XtManageChild(_pbEditBeam);
@@ -1577,7 +1577,7 @@ void MainWindow::create(Widget parent)
     
     ac = 0;
     _pbEditHeader = XmCreatePushButton(_pmEdit,
-        "pbEditHeader",
+        (char*)"pbEditHeader",
         args, 
         ac);
     XtManageChild(_pbEditHeader);
@@ -1613,7 +1613,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 64); ac++;
     XtSetArg(args[ac], XmNheight, 25); ac++;
     _cbView = XmCreateCascadeButton(_menuBar,
-        "cbView",
+        (char*)"cbView",
         args, 
         ac);
     XtManageChild(_cbView);
@@ -1624,13 +1624,13 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 267); ac++;
     XtSetArg(args[ac], XmNheight, 291); ac++;
     _pmView = XmCreatePulldownMenu(XtParent(_cbView),
-        "pmView",
+        (char*)"pmView",
         args, 
         ac);
     
     ac = 0;
     _pbViewRefresh = XmCreatePushButton(_pmView,
-        "pbViewRefresh",
+        (char*)"pbViewRefresh",
         args, 
         ac);
     XtManageChild(_pbViewRefresh);
@@ -1658,7 +1658,7 @@ void MainWindow::create(Widget parent)
     
     ac = 0;
     _pbViewZoom = XmCreatePushButton(_pmView,
-        "pbViewZoom",
+        (char*)"pbViewZoom",
         args, 
         ac);
     XtManageChild(_pbViewZoom);
@@ -1686,7 +1686,7 @@ void MainWindow::create(Widget parent)
     
     ac = 0;
     _pbViewUnzoom = XmCreatePushButton(_pmView,
-        "pbViewUnzoom",
+        (char*)"pbViewUnzoom",
         args, 
         ac);
     XtManageChild(_pbViewUnzoom);
@@ -1715,7 +1715,7 @@ void MainWindow::create(Widget parent)
     ac = 0;
     XtSetArg(args[ac], XmNsensitive, True); ac++;
     _pbViewPan = XmCreatePushButton(_pmView,
-        "pbViewPan",
+        (char*)"pbViewPan",
         args, 
         ac);
     XtManageChild(_pbViewPan);
@@ -1743,14 +1743,14 @@ void MainWindow::create(Widget parent)
     
     ac = 0;
     _spView1 = XmCreateSeparator(_pmView,
-        "spView1",
+        (char*)"spView1",
         args, 
         ac);
     XtManageChild(_spView1);
     
     ac = 0;
     _pbViewHeader = XmCreatePushButton(_pmView,
-        "pbViewHeader",
+        (char*)"pbViewHeader",
         args, 
         ac);
     XtManageChild(_pbViewHeader);
@@ -1779,7 +1779,7 @@ void MainWindow::create(Widget parent)
     ac = 0;
     XtSetArg(args[ac], XmNsensitive, False); ac++;
     _tbViewCalc = XmCreateToggleButton(_pmView,
-        "tbViewCalc",
+        (char*)"tbViewCalc",
         args, 
         ac);
     XtManageChild(_tbViewCalc);
@@ -1800,7 +1800,7 @@ void MainWindow::create(Widget parent)
     
     ac = 0;
     _tbViewObs = XmCreateToggleButton(_pmView,
-        "tbViewObs",
+        (char*)"tbViewObs",
         args, 
         ac);
     XtManageChild(_tbViewObs);
@@ -1832,7 +1832,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNvisibleWhenOff, False); ac++;
     XtSetArg(args[ac], XmNrecomputeSize, True); ac++;
     _tbViewReso = XmCreateToggleButton(_pmView,
-        "tbViewReso",
+        (char*)"tbViewReso",
         args, 
         ac);
     XtManageChild(_tbViewReso);
@@ -1860,7 +1860,7 @@ void MainWindow::create(Widget parent)
     
     ac = 0;
     _tbViewMeasure = XmCreateToggleButton(_pmView,
-        "tbViewMeasure",
+        (char*)"tbViewMeasure",
         args, 
         ac);
     XtManageChild(_tbViewMeasure);
@@ -1889,7 +1889,7 @@ void MainWindow::create(Widget parent)
     ac = 0;
     XtSetArg(args[ac], XmNsensitive, False); ac++;
     _tbViewPlot = XmCreateToggleButton(_pmView,
-        "tbViewPlot",
+        (char*)"tbViewPlot",
         args, 
         ac);
     XtManageChild(_tbViewPlot);
@@ -1912,7 +1912,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNsensitive, False); ac++;
     XtSetArg(args[ac], XmNrecomputeSize, True); ac++;
     _tbViewPixel = XmCreateToggleButton(_pmView,
-        "tbViewPixel",
+        (char*)"tbViewPixel",
         args, 
         ac);
     XtManageChild(_tbViewPixel);
@@ -1941,7 +1941,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 64); ac++;
     XtSetArg(args[ac], XmNheight, 25); ac++;
     _cbHelp = XmCreateCascadeButton(_menuBar,
-        "cbHelp",
+        (char*)"cbHelp",
         args, 
         ac);
     XtManageChild(_cbHelp);
@@ -1952,13 +1952,13 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 290); ac++;
     XtSetArg(args[ac], XmNheight, 85); ac++;
     _pmHelp = XmCreatePulldownMenu(XtParent(_cbHelp),
-        "pmHelp",
+        (char*)"pmHelp",
         args, 
         ac);
     
     ac = 0;
     _pbHelpHTML = XmCreatePushButton(_pmHelp,
-        "pbHelpHTML",
+        (char*)"pbHelpHTML",
         args, 
         ac);
     XtManageChild(_pbHelpHTML);
@@ -1986,7 +1986,7 @@ void MainWindow::create(Widget parent)
     
     ac = 0;
     _pbHelpAbout = XmCreatePushButton(_pmHelp,
-        "pbHelpAbout",
+        (char*)"pbHelpAbout",
         args, 
         ac);
     XtManageChild(_pbHelpAbout);
@@ -2014,7 +2014,7 @@ void MainWindow::create(Widget parent)
     
     ac = 0;
     _pbHelpRefln = XmCreatePushButton(_pmHelp,
-        "pbHelpRefln",
+        (char*)"pbHelpRefln",
         args, 
         ac);
     XtManageChild(_pbHelpRefln);
@@ -2050,7 +2050,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 76); ac++;
     XtSetArg(args[ac], XmNheight, 25); ac++;
     _cbUtils = XmCreateCascadeButton(_menuBar,
-        "cbUtils",
+        (char*)"cbUtils",
         args, 
         ac);
     XtManageChild(_cbUtils);
@@ -2061,13 +2061,13 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 170); ac++;
     XtSetArg(args[ac], XmNheight, 31); ac++;
     _pmUtils = XmCreatePulldownMenu(XtParent(_cbUtils),
-        "pmUtils",
+        (char*)"pmUtils",
         args, 
         ac);
     
     ac = 0;
     _pbUtilsProcess = XmCreatePushButton(_pmUtils,
-        "pbUtilsProcess",
+        (char*)"pbUtilsProcess",
         args, 
         ac);
     XtManageChild(_pbUtilsProcess);
@@ -2096,7 +2096,7 @@ void MainWindow::create(Widget parent)
 //+2010-03-24 JWP
     ac = 0;
     _pbUtilsProcessExtern = XmCreatePushButton(_pmUtils,
-        "pbUtilsProcessExtern",
+        (char*)"pbUtilsProcessExtern",
         args, 
         ac);
     XtManageChild(_pbUtilsProcessExtern);
@@ -2124,7 +2124,7 @@ void MainWindow::create(Widget parent)
 
     ac = 0;
     _pbUtilsProcessExternHKL = XmCreatePushButton(_pmUtils,
-        "pbUtilsProcessExternHKL",
+        (char*)"pbUtilsProcessExternHKL",
         args, 
         ac);
     XtManageChild(_pbUtilsProcessExternHKL);
@@ -2152,7 +2152,7 @@ void MainWindow::create(Widget parent)
 
     ac = 0;
     _pbUtilsProcessExternXDS = XmCreatePushButton(_pmUtils,
-        "pbUtilsProcessExternXDS",
+        (char*)"pbUtilsProcessExternXDS",
         args, 
         ac);
     XtManageChild(_pbUtilsProcessExternXDS);
@@ -2180,7 +2180,7 @@ void MainWindow::create(Widget parent)
 
     ac = 0;
     _pbUtilsProcessExternMOSFLM = XmCreatePushButton(_pmUtils,
-        "pbUtilsProcessExternMOSFLM",
+        (char*)"pbUtilsProcessExternMOSFLM",
         args, 
         ac);
     XtManageChild(_pbUtilsProcessExternMOSFLM);
@@ -2217,7 +2217,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 1021); ac++;
     XtSetArg(args[ac], XmNheight, 716); ac++;
     _form = XmCreateForm(_MainWindow,
-        "form",
+        (char*)"form",
         args, 
         ac);
     XtManageChild(_form);
@@ -2228,7 +2228,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 289); ac++;
     XtSetArg(args[ac], XmNheight, 231); ac++;
     _frImageSmall = XmCreateFrame(_form,
-        "frImageSmall",
+        (char*)"frImageSmall",
         args, 
         ac);
     XtManageChild(_frImageSmall);
@@ -2239,7 +2239,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 283); ac++;
     XtSetArg(args[ac], XmNheight, 225); ac++;
     _daImageSmall = XmCreateDrawingArea(_frImageSmall,
-        "daImageSmall",
+        (char*)"daImageSmall",
         args, 
         ac);
     XtManageChild(_daImageSmall);
@@ -2250,7 +2250,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 286); ac++;
     XtSetArg(args[ac], XmNheight, 480); ac++;
     _pwMain = XmCreatePanedWindow(_form,
-        "pwMain",
+        (char*)"pwMain",
         args, 
         ac);
     XtManageChild(_pwMain);
@@ -2260,7 +2260,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNallowResize, True); ac++;
     XtSetArg(args[ac], XmNwidth, 280); ac++;
     _foMainTop = XmCreateForm(_pwMain,
-        "foMainTop",
+        (char*)"foMainTop",
         args, 
         ac);
     XtManageChild(_foMainTop);
@@ -2270,7 +2270,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNsensitive, True); ac++;
     XtSetArg(args[ac], XmNindicatorOn, True); ac++;
     XtSetArg(args[ac], XmNselectColor, 
-        BX_CONVERT(_foMainTop, "green", 
+        BX_CONVERT(_foMainTop, (char*)"green", 
         XmRPixel, 0, &argok)); if (argok) ac++;
     XtSetArg(args[ac], XmNindicatorType, XmONE_OF_MANY); ac++;
     XtSetArg(args[ac], XmNvisibleWhenOff, True); ac++;
@@ -2280,7 +2280,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 140); ac++;
     XtSetArg(args[ac], XmNheight, 30); ac++;
     _tbCursorBeam = XmCreateToggleButton(_foMainTop,
-        "tbCursorBeam",
+        (char*)"tbCursorBeam",
         args, 
         ac);
     XtManageChild(_tbCursorBeam);
@@ -2311,7 +2311,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNsensitive, True); ac++;
     XtSetArg(args[ac], XmNindicatorOn, True); ac++;
     XtSetArg(args[ac], XmNselectColor, 
-        BX_CONVERT(_foMainTop, "green", 
+        BX_CONVERT(_foMainTop, (char*)"green", 
         XmRPixel, 0, &argok)); if (argok) ac++;
     XtSetArg(args[ac], XmNindicatorType, XmONE_OF_MANY); ac++;
     XtSetArg(args[ac], XmNvisibleWhenOff, True); ac++;
@@ -2321,7 +2321,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 140); ac++;
     XtSetArg(args[ac], XmNheight, 30); ac++;
     _tbCursorSpot = XmCreateToggleButton(_foMainTop,
-        "tbCursorSpot",
+        (char*)"tbCursorSpot",
         args, 
         ac);
     XtManageChild(_tbCursorSpot);
@@ -2352,7 +2352,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNsensitive, True); ac++;
     XtSetArg(args[ac], XmNindicatorOn, True); ac++;
     XtSetArg(args[ac], XmNselectColor, 
-        BX_CONVERT(_foMainTop, "green", 
+        BX_CONVERT(_foMainTop, (char*)"green", 
         XmRPixel, 0, &argok)); if (argok) ac++;
     XtSetArg(args[ac], XmNindicatorType, XmONE_OF_MANY); ac++;
     XtSetArg(args[ac], XmNvisibleWhenOff, True); ac++;
@@ -2362,7 +2362,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 140); ac++;
     XtSetArg(args[ac], XmNheight, 30); ac++;
     _tbCursorMeasure = XmCreateToggleButton(_foMainTop,
-        "tbCursorMeasure",
+        (char*)"tbCursorMeasure",
         args, 
         ac);
     XtManageChild(_tbCursorMeasure);
@@ -2393,7 +2393,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNsensitive, True); ac++;
     XtSetArg(args[ac], XmNindicatorOn, True); ac++;
     XtSetArg(args[ac], XmNselectColor, 
-        BX_CONVERT(_foMainTop, "green", 
+        BX_CONVERT(_foMainTop, (char*)"green", 
         XmRPixel, 0, &argok)); if (argok) ac++;
     XtSetArg(args[ac], XmNindicatorType, XmONE_OF_MANY); ac++;
     XtSetArg(args[ac], XmNvisibleWhenOff, True); ac++;
@@ -2403,7 +2403,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 140); ac++;
     XtSetArg(args[ac], XmNheight, 30); ac++;
     _tbCursorRect = XmCreateToggleButton(_foMainTop,
-        "tbCursorRect",
+        (char*)"tbCursorRect",
         args, 
         ac);
     XtManageChild(_tbCursorRect);
@@ -2436,7 +2436,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 28); ac++;
     XtSetArg(args[ac], XmNheight, 40); ac++;
     _lbImageNum = XmCreateLabel(_foMainTop,
-        "lbImageNum",
+        (char*)"lbImageNum",
         args, 
         ac);
     XtManageChild(_lbImageNum);
@@ -2449,7 +2449,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 65); ac++;
     XtSetArg(args[ac], XmNheight, 40); ac++;
     _pbImageNext = XmCreatePushButton(_foMainTop,
-        "pbImageNext",
+        (char*)"pbImageNext",
         args, 
         ac);
     XtManageChild(_pbImageNext);
@@ -2483,7 +2483,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 65); ac++;
     XtSetArg(args[ac], XmNheight, 40); ac++;
     _pbImagePrev = XmCreatePushButton(_foMainTop,
-        "pbImagePrev",
+        (char*)"pbImagePrev",
         args, 
         ac);
     XtManageChild(_pbImagePrev);
@@ -2516,7 +2516,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 280); ac++;
     XtSetArg(args[ac], XmNheight, 156); ac++;
     _swOutput = XmCreateScrolledWindow(_foMainTop,
-        "swOutput",
+        (char*)"swOutput",
         args, 
         ac);
     XtManageChild(_swOutput);
@@ -2529,7 +2529,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNeditable, False); ac++;
     XtSetArg(args[ac], XmNheight, 137); ac++;
     _tfOutput = XmCreateText(_swOutput,
-        "tfOutput",
+        (char*)"tfOutput",
         args, 
         ac);
     XtManageChild(_tfOutput);
@@ -2544,7 +2544,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 100); ac++;
     XtSetArg(args[ac], XmNheight, 40); ac++;
     _tfImageNum = XmCreateTextField(_foMainTop,
-        "tfImageNum",
+        (char*)"tfImageNum",
         args, 
         ac);
     XtManageChild(_tfImageNum);
@@ -2561,7 +2561,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNallowResize, True); ac++;
     XtSetArg(args[ac], XmNwidth, 280); ac++;
     _foMainMid = XmCreateForm(_pwMain,
-        "foMainMid",
+        (char*)"foMainMid",
         args, 
         ac);
     XtManageChild(_foMainMid);
@@ -2574,7 +2574,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 160); ac++;
     XtSetArg(args[ac], XmNheight, 40); ac++;
     _lbRotStart = XmCreateLabel(_foMainMid,
-        "lbRotStart",
+        (char*)"lbRotStart",
         args, 
         ac);
     XtManageChild(_lbRotStart);
@@ -2586,7 +2586,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 100); ac++;
     XtSetArg(args[ac], XmNheight, 40); ac++;
     _tfRotStart = XmCreateTextField(_foMainMid,
-        "tfRotStart",
+        (char*)"tfRotStart",
         args, 
         ac);
     XtManageChild(_tfRotStart);
@@ -2620,7 +2620,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 160); ac++;
     XtSetArg(args[ac], XmNheight, 40); ac++;
     _lbRotEnd = XmCreateLabel(_foMainMid,
-        "lbRotEnd",
+        (char*)"lbRotEnd",
         args, 
         ac);
     XtManageChild(_lbRotEnd);
@@ -2632,7 +2632,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 100); ac++;
     XtSetArg(args[ac], XmNheight, 40); ac++;
     _tfRotEnd = XmCreateTextField(_foMainMid,
-        "tfRotEnd",
+        (char*)"tfRotEnd",
         args, 
         ac);
     XtManageChild(_tfRotEnd);
@@ -2665,7 +2665,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 100); ac++;
     XtSetArg(args[ac], XmNheight, 40); ac++;
     _tfDetDist = XmCreateTextField(_foMainMid,
-        "tfDetDist",
+        (char*)"tfDetDist",
         args, 
         ac);
     XtManageChild(_tfDetDist);
@@ -2699,7 +2699,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 160); ac++;
     XtSetArg(args[ac], XmNheight, 40); ac++;
     _lbDetDist = XmCreateLabel(_foMainMid,
-        "lbDetDist",
+        (char*)"lbDetDist",
         args, 
         ac);
     XtManageChild(_lbDetDist);
@@ -2712,7 +2712,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 160); ac++;
     XtSetArg(args[ac], XmNheight, 40); ac++;
     _lbDetSwing = XmCreateLabel(_foMainMid,
-        "lbDetSwing",
+        (char*)"lbDetSwing",
         args, 
         ac);
     XtManageChild(_lbDetSwing);
@@ -2724,7 +2724,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 100); ac++;
     XtSetArg(args[ac], XmNheight, 40); ac++;
     _tfDetSwing = XmCreateTextField(_foMainMid,
-        "tfDetSwing",
+        (char*)"tfDetSwing",
         args, 
         ac);
     XtManageChild(_tfDetSwing);
@@ -2757,7 +2757,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 100); ac++;
     XtSetArg(args[ac], XmNheight, 40); ac++;
     _tfWavelength = XmCreateTextField(_foMainMid,
-        "tfWavelength",
+        (char*)"tfWavelength",
         args, 
         ac);
     XtManageChild(_tfWavelength);
@@ -2791,7 +2791,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 160); ac++;
     XtSetArg(args[ac], XmNheight, 40); ac++;
     _lbWavelength = XmCreateLabel(_foMainMid,
-        "lbWavelength",
+        (char*)"lbWavelength",
         args, 
         ac);
     XtManageChild(_lbWavelength);
@@ -2802,7 +2802,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 732); ac++;
     XtSetArg(args[ac], XmNheight, 716); ac++;
     _frImageBig = XmCreateFrame(_form,
-        "frImageBig",
+        (char*)"frImageBig",
         args, 
         ac);
     XtManageChild(_frImageBig);
@@ -2813,7 +2813,7 @@ void MainWindow::create(Widget parent)
     XtSetArg(args[ac], XmNwidth, 726); ac++;
     XtSetArg(args[ac], XmNheight, 710); ac++;
     _daImageBig = XmCreateDrawingArea(_frImageBig,
-        "daImageBig",
+        (char*)"daImageBig",
         args, 
         ac);
     XtManageChild(_daImageBig);
@@ -3350,7 +3350,7 @@ void MainWindow::create(Widget parent)
 
     Atom hWM_DELETE_WINDOW;
     hWM_DELETE_WINDOW = XmInternAtom(XtDisplay(parent),
-				     "WM_DELETE_WINDOW", False);
+				     (char*)"WM_DELETE_WINDOW", False);
 
     m_ptClientDataStructs[m_nCDC].object = this;
 
@@ -3377,12 +3377,12 @@ void MainWindow::create(Widget parent)
 
     // Kludge
 
-      vSetLabel(_tbCursorMeasure, "Erase line", NULL);
-      vSetLabel(_tbCursorSpot, "Erase circle", NULL);
-      // vSetLabel(_tbCursorBeam, "Erase quad", NULL);
-      vSetLabel(_tbCursorMeasure, "Measure", NULL);
-      vSetLabel(_tbCursorSpot, "Spot circle", NULL);
-      // vSetLabel(_tbCursorBeam, "Beam circle", NULL);
+      vSetLabel(_tbCursorMeasure, (char*)"Erase line", NULL);
+      vSetLabel(_tbCursorSpot, (char*)"Erase circle", NULL);
+      // vSetLabel(_tbCursorBeam, (char*)"Erase quad", NULL);
+      vSetLabel(_tbCursorMeasure, (char*)"Measure", NULL);
+      vSetLabel(_tbCursorSpot, (char*)"Spot circle", NULL);
+      // vSetLabel(_tbCursorBeam, (char*)"Beam circle", NULL);
 
       // If DTREK_PROCESS_EXTERN is undefined, 
       //   then unmanage the pbUtilsProcessExtern 
@@ -3570,12 +3570,12 @@ void MainWindow::vFileSelectionPostCB(Widget w, XtPointer clientData, XtPointer 
       // Set OK button label
 
       xsOKLabel = (XmString)BX_CONVERT(_cUIimagefileSelect->baseWidget(),
-			  "OK, Open", XmRXmString, 0, &argok);
+			  (char*)"OK, Open", XmRXmString, 0, &argok);
 
       // Dialog box title
       
       xsTitle = (XmString)BX_CONVERT(_cUIimagefileSelect->baseWidget(),
-			"Open an image file", XmRXmString, 0, &argok);
+			(char*)"Open an image file", XmRXmString, 0, &argok);
 
     }
   else if (w == _pbFileSaveAs)
@@ -3590,12 +3590,12 @@ void MainWindow::vFileSelectionPostCB(Widget w, XtPointer clientData, XtPointer 
       // Set OK button label
 
       xsOKLabel = (XmString)BX_CONVERT(_cUIimagefileSelect->baseWidget(),
-			  "OK, Save As", XmRXmString, 0, &argok);
+			  (char*)"OK, Save As", XmRXmString, 0, &argok);
 
       // Dialog box title
 
       xsTitle = (XmString)BX_CONVERT(_cUIimagefileSelect->baseWidget(),
-			"Save displayed image to a file", 
+			(char*)"Save displayed image to a file", 
 			XmRXmString, 0, &argok); 
     }
   else if (w == _pbFileSaveHeader)
@@ -3609,12 +3609,12 @@ void MainWindow::vFileSelectionPostCB(Widget w, XtPointer clientData, XtPointer 
       // Set OK button label
 
       xsOKLabel = (XmString)BX_CONVERT(_cUIimagefileSelect->baseWidget(),
-			  "OK, Save Header As", XmRXmString, 0, &argok);
+			  (char*)"OK, Save Header As", XmRXmString, 0, &argok);
 
       // Dialog box title
 
       xsTitle = (XmString)BX_CONVERT(_cUIimagefileSelect->baseWidget(),
-			"Save ONLY header to a file", 
+			(char*)"Save ONLY header to a file", 
 			XmRXmString, 0, &argok); 
     }
   else if (w == _pbFileTemplate)
@@ -3627,12 +3627,12 @@ void MainWindow::vFileSelectionPostCB(Widget w, XtPointer clientData, XtPointer 
       // Set OK button label
 
       xsOKLabel = (XmString)BX_CONVERT(_cUIimagefileSelect->baseWidget(),
-			  "Set Template", XmRXmString, 0, &argok);
+			  (char*)"Set Template", XmRXmString, 0, &argok);
 
       // Dialog box title
 
       xsTitle = (XmString)BX_CONVERT(_cUIimagefileSelect->baseWidget(),
-			"Set scan image template and sequence info", 
+			(char*)"Set scan image template and sequence info", 
 			XmRXmString, 0, &argok);
     }
   else if (w == _pbFileNewTile)
@@ -3642,12 +3642,12 @@ void MainWindow::vFileSelectionPostCB(Widget w, XtPointer clientData, XtPointer 
       // Set OK button label
 
       xsOKLabel = (XmString)BX_CONVERT(_cUIimagefileSelect->baseWidget(),
-			  "OK, Tile", XmRXmString, 0, &argok);
+			  (char*)"OK, Tile", XmRXmString, 0, &argok);
 
       // Dialog box title
 
       xsTitle = (XmString)BX_CONVERT(_cUIimagefileSelect->baseWidget(),
-			"Tile a series of images", 
+			(char*)"Tile a series of images", 
 			XmRXmString, 0, &argok);
     }
   else if (w == _pbFileNewOverlay)
@@ -3657,12 +3657,12 @@ void MainWindow::vFileSelectionPostCB(Widget w, XtPointer clientData, XtPointer 
       // Set OK button label
 
       xsOKLabel = (XmString)BX_CONVERT(_cUIimagefileSelect->baseWidget(),
-			  "OK, Overlay", XmRXmString, 0, &argok);
+			  (char*)"OK, Overlay", XmRXmString, 0, &argok);
 
       // Dialog box title
 
       xsTitle = (XmString)BX_CONVERT(_cUIimagefileSelect->baseWidget(),
-			"Overlay a series of images", 
+			(char*)"Overlay a series of images", 
 			XmRXmString, 0, &argok);
     }
   else if (w == _pbFileNewUnderlay)
@@ -3672,12 +3672,12 @@ void MainWindow::vFileSelectionPostCB(Widget w, XtPointer clientData, XtPointer 
       // Set OK button label
 
       xsOKLabel = (XmString)BX_CONVERT(_cUIimagefileSelect->baseWidget(),
-			  "OK, Underlay", XmRXmString, 0, &argok);
+			  (char*)"OK, Underlay", XmRXmString, 0, &argok);
 
       // Dialog box title
 
       xsTitle = (XmString)BX_CONVERT(_cUIimagefileSelect->baseWidget(),
-			"Underlay a series of images", 
+			(char*)"Underlay a series of images", 
 			XmRXmString, 0, &argok);
     }
   else if (w == _pbFileNewMovie)
@@ -3687,12 +3687,12 @@ void MainWindow::vFileSelectionPostCB(Widget w, XtPointer clientData, XtPointer 
       // Set OK button label
 
       xsOKLabel = (XmString)BX_CONVERT(_cUIimagefileSelect->baseWidget(),
-			  "OK, Run movie", XmRXmString, 0, &argok);
+			  (char*)"OK, Run movie", XmRXmString, 0, &argok);
 
       // Dialog box title
 
       xsTitle = (XmString)BX_CONVERT(_cUIimagefileSelect->baseWidget(),
-			"Repeated show a series of images like movie frames", 
+			(char*)"Repeated show a series of images like movie frames", 
 			XmRXmString, 0, &argok);
     }
   else if (w == _pbFileNewAverage)
@@ -3702,12 +3702,12 @@ void MainWindow::vFileSelectionPostCB(Widget w, XtPointer clientData, XtPointer 
       // Set OK button label
 
       xsOKLabel = (XmString)BX_CONVERT(_cUIimagefileSelect->baseWidget(),
-			  "OK, Average", XmRXmString, 0, &argok);
+			  (char*)"OK, Average", XmRXmString, 0, &argok);
 
       // Dialog box title
 
       xsTitle = (XmString)BX_CONVERT(_cUIimagefileSelect->baseWidget(),
-			"Average a series of images", 
+			(char*)"Average a series of images", 
 			XmRXmString, 0, &argok);
     }
   else if (w == _pbFileNewStats)
@@ -3717,12 +3717,12 @@ void MainWindow::vFileSelectionPostCB(Widget w, XtPointer clientData, XtPointer 
       // Set OK button label
 
       xsOKLabel = (XmString)BX_CONVERT(_cUIimagefileSelect->baseWidget(),
-			  "OK, Statistics", XmRXmString, 0, &argok);
+			  (char*)"OK, Statistics", XmRXmString, 0, &argok);
 
       // Dialog box title
 
       xsTitle = (XmString)BX_CONVERT(_cUIimagefileSelect->baseWidget(),
-			"Do some statistics on a series of images", 
+			(char*)"Do some statistics on a series of images", 
 			XmRXmString, 0, &argok);
     }
 
@@ -4037,7 +4037,7 @@ void MainWindow::vDeleteReflns(Widget w, XtPointer clientData, XtPointer callDat
 		  nNumFlagged++;
 		}
 	    }
-	  sprintf(m_a255cText, "%d refs deleted.\n", nNumFlagged);
+	  snprintf(m_a255cText, sizeof(m_a255cText), "%d refs deleted.\n", nNumFlagged);
 	  vPutMessage(m_a255cText);
 	  // Re-sort on "color" before display
 	  
@@ -4082,8 +4082,8 @@ void MainWindow::vEraseToggleCB(Widget w, XtPointer clientData, XtPointer callDa
                  "to save the edited image.\n\n"
 		 "See also Help on Erase (edit mask) mode....\n",
 		 NULL);
-      vSetLabel(_tbCursorMeasure, "Erase line", NULL);
-      vSetLabel(_tbCursorSpot, "Erase circle", NULL);
+      vSetLabel(_tbCursorMeasure, (char*)"Erase line", NULL);
+      vSetLabel(_tbCursorSpot, (char*)"Erase circle", NULL);
       m_poXdisplay1->vSetCursorMode(RB_NONE_MODE);
       m_poXdisplay->vSetCursorMode(RB_NONE_MODE);
       XmToggleButtonSetState(_tbCursorRect, False, False);
@@ -4091,7 +4091,7 @@ void MainWindow::vEraseToggleCB(Widget w, XtPointer clientData, XtPointer callDa
       XmToggleButtonSetState(_tbCursorMeasure, False, False);
       XmToggleButtonSetState(_tbCursorBeam, False, False);
 
-      // vSetLabel(_tbCursorBeam, "Erase quad", NULL);
+      // vSetLabel(_tbCursorBeam, (char*)"Erase quad", NULL);
     }
   else
     {
@@ -4106,9 +4106,9 @@ void MainWindow::vEraseToggleCB(Widget w, XtPointer clientData, XtPointer callDa
       XmToggleButtonSetState(_tbCursorMeasure, False, False);
       
       m_poXcursor->vReset();
-      vSetLabel(_tbCursorMeasure, "Measure", NULL);
-      vSetLabel(_tbCursorSpot, "Spot circle", NULL);
-      // vSetLabel(_tbCursorBeam, "Beam circle", NULL);
+      vSetLabel(_tbCursorMeasure, (char*)"Measure", NULL);
+      vSetLabel(_tbCursorSpot, (char*)"Spot circle", NULL);
+      // vSetLabel(_tbCursorBeam, (char*)"Beam circle", NULL);
       // File name 'beam.mask' may not be correct here
       if (0 != m_nEraseMode)
 	{
@@ -4373,7 +4373,7 @@ void MainWindow::vDrawResoCB(Widget w, XtPointer clientData, XtPointer callData)
     {
       float fResMin, fResMax, fResMaxEdge;
       m_poDetector->nGetResolution(m_fS0, &fResMin, &fResMax, &fResMaxEdge);
-      sprintf(m_a255cText, "Min, max, edge resol:\n %.2f, %.2f, %.2f\n",
+      snprintf(m_a255cText, sizeof(m_a255cText), "Min, max, edge resol:\n %.2f, %.2f, %.2f\n",
 	      fResMin * m_fWavelength, fResMax * m_fWavelength,
 	      fResMaxEdge * m_fWavelength);
       vPutMessage(m_a255cText);
@@ -4534,7 +4534,7 @@ void MainWindow::vUtilsCB(Widget w, XtPointer clientData, XtPointer callData)
     }
   else if (w == _pbUtilsProcessExtern)
     {
-      //sprintf(m_a255cText, "Process > ProcessExtern clicked.\n");
+      //snprintf(m_a255cText, sizeof(m_a255cText), "Process > ProcessExtern clicked.\n");
       //vPutMessage(m_a255cText);
       sTemp = sTransSymbol("$(DTREK_PROCESS_EXTERN)");
       vPutMessage("... Attempting to launch " + sTemp + " ...\n", 1);
@@ -4771,7 +4771,7 @@ void MainWindow::vFileTemplateCB(Widget w, XtPointer clientData, XtPointer callD
 	  nStat = sscanf(pcString, "%d", &nTemp);
 	  if (1 == nStat)
 	    {
-	      sprintf(m_a255cText, "Image #: %d\n", nTemp);
+	      snprintf(m_a255cText, sizeof(m_a255cText), "Image #: %d\n", nTemp);
 	      vPutMessage(m_a255cText);
 	      m_poScan->vSetSeqNum(nTemp);
 	    }
@@ -4822,13 +4822,13 @@ void MainWindow::vFileTemplateCB(Widget w, XtPointer clientData, XtPointer callD
 	  // Go back to original sequence number
 
 	  m_poScan->vSetSeqNum(nSeq);
-	  sprintf(m_a255cText, "%d", nSeq);
+	  snprintf(m_a255cText, sizeof(m_a255cText), "%d", nSeq);
 	  XmTextSetString(_tfImageNum, m_a255cText);
 	  m_poXcursor->vReset();
 	  return;
 	}
 
-      sprintf(m_a255cText, "%d", m_poScan->nGetSeqNum());
+      snprintf(m_a255cText, sizeof(m_a255cText), "%d", m_poScan->nGetSeqNum());
       XmTextSetString(_tfImageNum, m_a255cText);
 
       m_poScan->nGetImage(m_poImage);
@@ -4877,9 +4877,9 @@ void MainWindow::vFileTemplateCB(Widget w, XtPointer clientData, XtPointer callD
 //	      cout << "From m_poRotation!\n";
 	      m_tReflnProps.fImageRotStart = m_poRotation->fGetRotStart();
 	      m_tReflnProps.fImageRotEnd   = m_poRotation->fGetRotEnd();
-	      sprintf (m_a255cText, "%.3f", m_poRotation->fGetRotStart());
+	      snprintf(m_a255cText, sizeof(m_a255cText), "%.3f", m_poRotation->fGetRotStart());
 	      XmTextSetString(_tfRotStart, m_a255cText);
-	      sprintf (m_a255cText, "%.3f", m_poRotation->fGetRotEnd());
+	      snprintf(m_a255cText, sizeof(m_a255cText), "%.3f", m_poRotation->fGetRotEnd());
 	      XmTextSetString(_tfRotEnd, m_a255cText);
 	      vViewRefresh(_w, NULL, NULL);
 	      
@@ -4888,7 +4888,7 @@ void MainWindow::vFileTemplateCB(Widget w, XtPointer clientData, XtPointer callD
 	      if (0 == m_poImage->m_oHeader.nGetValue(
 			      D_K_CrystalPrefix D_K_GonioValues, &sTemp))
 		{
-		  sprintf(m_a255cText, "Crystal gonio angles:\n%s\n",
+		  snprintf(m_a255cText, sizeof(m_a255cText), "Crystal gonio angles:\n%s\n",
 			  sTemp.string());
 		  vPutMessage(m_a255cText);
 		}
@@ -4955,7 +4955,7 @@ void MainWindow::vTextFieldCB(Widget w, XtPointer clientData, XtPointer callData
   Boolean bChanged    = False;
   Boolean bRotChanged = False;
   float fResMin, fResMax, fResMaxEdge;
-  static char *pcMinMaxResol = "Min, max, edge resol:\n %.2f, %.2f, %.2f\n";
+  static char *pcMinMaxResol = (char*)"Min, max, edge resol:\n %.2f, %.2f, %.2f\n";
 
   if ( (XmCR_ACTIVATE == cbs->reason) || (XmCR_LOSING_FOCUS == cbs->reason) )
     {
@@ -5000,7 +5000,7 @@ void MainWindow::vTextFieldCB(Widget w, XtPointer clientData, XtPointer callData
 		  m_poDetector->nUpdateHeader(m_poHeader, "");
 		  m_poDetector->nGetResolution(m_fS0, &fResMin, &fResMax,
 					       &fResMaxEdge);
-		  sprintf(m_a255cText, pcMinMaxResol,
+		  snprintf(m_a255cText, sizeof(m_a255cText), pcMinMaxResol,
 			  fResMin * m_fWavelength, fResMax * m_fWavelength,
 			  fResMaxEdge * m_fWavelength);
 		  vPutMessage(m_a255cText);
@@ -5017,7 +5017,7 @@ void MainWindow::vTextFieldCB(Widget w, XtPointer clientData, XtPointer callData
 		  m_poDetector->nUpdateHeader(m_poHeader, "");
 		  m_poDetector->nGetResolution(m_fS0, &fResMin, &fResMax, 
 					       &fResMaxEdge);
-		  sprintf(m_a255cText, pcMinMaxResol,
+		  snprintf(m_a255cText, sizeof(m_a255cText), pcMinMaxResol,
 			  fResMin * m_fWavelength, fResMax * m_fWavelength,
 			  fResMaxEdge * m_fWavelength);
 		  vPutMessage(m_a255cText);
@@ -5036,7 +5036,7 @@ void MainWindow::vTextFieldCB(Widget w, XtPointer clientData, XtPointer callData
 		    {
 		      m_poDetector->nGetResolution(m_fS0, &fResMin, &fResMax, 
 						   &fResMaxEdge);
-		      sprintf(m_a255cText, pcMinMaxResol,
+		      snprintf(m_a255cText, sizeof(m_a255cText), pcMinMaxResol,
 			      fResMin * m_fWavelength, fResMax * m_fWavelength,
 			      fResMaxEdge * m_fWavelength);
 		      vPutMessage(m_a255cText);
@@ -5078,10 +5078,10 @@ void MainWindow::vTextFieldCB(Widget w, XtPointer clientData, XtPointer callData
       if (NULL != cbs->event) 
 	{
 #if (XmVersion >= 1002)
-//	  XmChangeColor(w, BX_CONVERT(w, "red", XmRPixel, 0, &bTemp));
+//	  XmChangeColor(w, BX_CONVERT(w, (char*)"red", XmRPixel, 0, &bTemp));
 #else
 //	  XtVaSetValues(w, XmNbackground, 
-//			BX_CONVERT(w, "red", XmRPixel, 0, &bTemp), NULL);
+//			BX_CONVERT(w, (char*)"red", XmRPixel, 0, &bTemp), NULL);
 #endif
 	}
     }
@@ -5127,7 +5127,7 @@ void MainWindow::vDAInputCB(Widget w, XtPointer clientData, XtPointer callData)
 		      m_dCurrPoint[1] = (double)f2;
 		      fValue = (m_poImage->*m_poImage->prfGetPixel)((int)(f1),
 								    (int)(f2));
-		      sprintf (m_a255cText, "\nImage coords: %.1f, %.1f\n"
+		      snprintf(m_a255cText, sizeof(m_a255cText), "\nImage coords: %.1f, %.1f\n"
 			       "Value:     %12d\n", 
 			       f1, f2, (int) fValue);
 		      vPutMessage(m_a255cText);
@@ -5142,7 +5142,7 @@ void MainWindow::vDAInputCB(Widget w, XtPointer clientData, XtPointer callData)
 						  &f1MM, &f2MM, &f3MM);
 			  if (0 == nStat)
 			    {
-			      sprintf (m_a255cText, "Mm pos: %8.2f, %8.2f\n",
+			      snprintf(m_a255cText, sizeof(m_a255cText), "Mm pos: %8.2f, %8.2f\n",
 				       f1MM, f2MM);
 			      vPutMessage(m_a255cText);
 			    }
@@ -5170,7 +5170,7 @@ void MainWindow::vDAInputCB(Widget w, XtPointer clientData, XtPointer callData)
 				    dDspacing = ABS(m_fWavelength / dDspacing);
 				  else
 				    dDspacing = 999999.99;
-				  sprintf(m_a255cText, 
+				  snprintf(m_a255cText, sizeof(m_a255cText), 
 					  "d-spacing between last\n"
 					  "2 points:  %12.2lf\n", dDspacing);
 				  vPutMessage(m_a255cText);
@@ -5179,7 +5179,7 @@ void MainWindow::vDAInputCB(Widget w, XtPointer clientData, XtPointer callData)
 
 			      f1MM = 2.0 * asin((double)m_fWavelength * 0.5 / (double)fReso)
                                        / Gs_dRADIANS_PER_DEGREE;
-			      sprintf (m_a255cText,
+			      snprintf(m_a255cText, sizeof(m_a255cText), 
 				       "Resol: %9.2f A,  2T: %.0f\n", fReso, f1MM);
 			      vPutMessage(m_a255cText);
 			    }
@@ -5237,7 +5237,7 @@ void MainWindow::vDAInputCB(Widget w, XtPointer clientData, XtPointer callData)
 					  // Found reflection close to point
 					  if (0 > nFI_fRotMid)
 					    {
-					      sprintf (m_a255cText,
+					      snprintf(m_a255cText, sizeof(m_a255cText), 
 						       "hkl: %d, %d, %d\n",
 						       poRefln->nGetH(),
 						       poRefln->nGetK(),
@@ -5245,7 +5245,7 @@ void MainWindow::vDAInputCB(Widget w, XtPointer clientData, XtPointer callData)
 					    }
 					  else
 					    {
-					      sprintf (m_a255cText,
+					      snprintf(m_a255cText, sizeof(m_a255cText), 
 						       "hkl: %d, %d, %d  Rot:%8.2f\n",
 						       poRefln->nGetH(),
 						       poRefln->nGetK(),
@@ -5496,9 +5496,9 @@ MainWindow::vNewImage(const int nUpdateScaling)
       m_tReflnProps.fImageRotStart = m_poRotation->fGetRotStart();
       m_tReflnProps.fImageRotEnd   = m_poRotation->fGetRotEnd();
 
-      sprintf (cString, "%.3f", m_poRotation->fGetRotStart());
+      snprintf(cString, sizeof(cString), "%.3f", m_poRotation->fGetRotStart());
       XmTextSetString(_tfRotStart, cString);
-      sprintf (cString, "%.3f", m_poRotation->fGetRotEnd());
+      snprintf(cString, sizeof(cString), "%.3f", m_poRotation->fGetRotEnd());
       XmTextSetString(_tfRotEnd, cString);
       
       m_poXdisplay1 = new CXdisplay (m_sFilename.string(), _daImageSmall, 
@@ -5511,7 +5511,7 @@ MainWindow::vNewImage(const int nUpdateScaling)
       if (0 == m_poImage->m_oHeader.nGetValue(
 			D_K_CrystalPrefix D_K_GonioValues, &sTemp))
 	{
-	  sprintf(m_a255cText, "Crystal gonio angles:\n%s\n",
+	  snprintf(m_a255cText, sizeof(m_a255cText), "Crystal gonio angles:\n%s\n",
 		  sTemp.string());
 	  vPutMessage(m_a255cText);
 	}
@@ -5610,28 +5610,28 @@ MainWindow::vUpdateText(void)
     {
       // Rot start
 
-      sprintf (cString, "%.3f", m_poRotation->fGetRotStart());
+      snprintf(cString, sizeof(cString), "%.3f", m_poRotation->fGetRotStart());
       XmTextSetString(_tfRotStart, cString);
 
       // Rot end
 
-      sprintf (cString, "%.3f", m_poRotation->fGetRotEnd());
+      snprintf(cString, sizeof(cString), "%.3f", m_poRotation->fGetRotEnd());
       XmTextSetString(_tfRotEnd, cString);
     }
 
   // Det dist
 
-  sprintf (cString, "%.2f", m_fDetDist);
+  snprintf(cString, sizeof(cString), "%.2f", m_fDetDist);
   XmTextSetString(_tfDetDist, cString);
 
   // Det swing
 
-  sprintf (cString, "%.2f", m_fDetSwing);
+  snprintf(cString, sizeof(cString), "%.2f", m_fDetSwing);
   XmTextSetString(_tfDetSwing, cString);
 
   // Wavelength
 
-  sprintf (cString, "%.5f", m_fWavelength);
+  snprintf(cString, sizeof(cString), "%.5f", m_fWavelength);
   XmTextSetString(_tfWavelength, cString);
 
 }
@@ -5728,7 +5728,7 @@ MainWindow::vIntegrate2D(const float fReso)
 	}
 
       // Print out results
-      sprintf (m_a255cText,
+      snprintf(m_a255cText, sizeof(m_a255cText), 
 	       "Intensity: %11.0f (%7.0f)\n"
 	       "Int/SigI: %8.1f\n"
 //	       "SigmaI:    %11.0f\n"
@@ -5737,14 +5737,14 @@ MainWindow::vIntegrate2D(const float fReso)
     }
   else
     {
-      sprintf(m_a255cText, "Error getting peak info.\n");
+      snprintf(m_a255cText, sizeof(m_a255cText), "Error getting peak info.\n");
     }
   vPutMessage(m_a255cText);
   if (-999.0 != fAvg)
     {
       // An average was successfully calculated, so display it
 
-      sprintf (m_a255cText,
+      snprintf(m_a255cText, sizeof(m_a255cText), 
 	       "Backgrnd: %10.0f (%5.0f)\n",
 //	       "Back. sd.: %12.0f\n", 
 	       fAvg, fSD);
@@ -5752,7 +5752,7 @@ MainWindow::vIntegrate2D(const float fReso)
   else
     {
       // Print error message
-      sprintf(m_a255cText, "Background error.\n");
+      snprintf(m_a255cText, sizeof(m_a255cText), "Background error.\n");
     }
   vPutMessage(m_a255cText);
 }
@@ -5768,7 +5768,7 @@ MainWindow::vOverlay(void)
 
   if ( (NULL != m_poScan) && (NULL != m_poXdisplay) )
     {
-      sprintf(m_a255cText, "Overlaying a series of %d images",
+      snprintf(m_a255cText, sizeof(m_a255cText), "Overlaying a series of %d images",
 	      m_poScan->m_nNumImages);	      
       m_nProgressCancel = 0;
       XtManageChild(_mbProgress);
@@ -5811,7 +5811,7 @@ MainWindow::vUnderlay(void)
 
   if ( (NULL != m_poScan) && (NULL != m_poXdisplay) )
     {
-      sprintf(m_a255cText, "Underlaying a series of %d images",
+      snprintf(m_a255cText, sizeof(m_a255cText), "Underlaying a series of %d images",
 	      m_poScan->m_nNumImages);	      
       m_nProgressCancel = 0;
       XtManageChild(_mbProgress);
@@ -5850,7 +5850,7 @@ MainWindow::vTile(void)
   int nStat;
   if ( (NULL != m_poImage) && (NULL != m_poScan) )
     {
-      sprintf(m_a255cText, "Tiling a series of %d images",
+      snprintf(m_a255cText, sizeof(m_a255cText), "Tiling a series of %d images",
 	      m_poScan->m_nNumImages);	      
       m_nProgressCancel = 0;
       XtManageChild(_mbProgress);
@@ -5900,7 +5900,7 @@ MainWindow::vAverage(void)
 
   if ( (NULL != m_poScan) && (NULL != m_poXdisplay) )
     {
-      sprintf(m_a255cText, "Averaging a series of %d images",
+      snprintf(m_a255cText, sizeof(m_a255cText), "Averaging a series of %d images",
 	      m_poScan->m_nNumImages);	      
       m_nProgressCancel = 0;
       XtManageChild(_mbProgress);
@@ -5938,7 +5938,7 @@ MainWindow::vMovie(void)
   int nStat;
   if ( (NULL != m_poImage) && (NULL != m_poScan) )
     {
-      sprintf(m_a255cText, "Movie of a series of %d images",
+      snprintf(m_a255cText, sizeof(m_a255cText), "Movie of a series of %d images",
 	      m_poScan->m_nNumImages);	      
       m_nProgressCancel = 0;
       XtManageChild(_mbProgress);
@@ -6988,7 +6988,7 @@ void MainWindow::vRubberbandCB (XtPointer pObj, const int nMode,
       if ( (RB_LINE_MODE == nMode) || (RB_TLIN_MODE == nMode) )
 	{
 	  // Line mode
-	  sprintf(m_a255cText, "Start pix: %.1f, %.1f\n  End pix: %.1f, %.1f\n",
+	  snprintf(m_a255cText, sizeof(m_a255cText), "Start pix: %.1f, %.1f\n  End pix: %.1f, %.1f\n",
 		  fPx0, fPx1, fPx2, fPx3);
 	  vPutMessage(m_a255cText);
 	  double a3dDiff[3];
@@ -7019,7 +7019,7 @@ void MainWindow::vRubberbandCB (XtPointer pObj, const int nMode,
 		dDspacing = ABS(m_fWavelength / dDspacing);
 	      else
 		dDspacing = 999999.99;
-	      sprintf(m_a255cText, 
+	      snprintf(m_a255cText, sizeof(m_a255cText), 
 		      "d-spacing between points:\n"
 		      "  1X: %6.1lf A, 2X: %6.1lf A,\n"
                       "  3X: %6.1lf A, 4X: %6.1lf A\n", 
@@ -7063,7 +7063,7 @@ void MainWindow::vRubberbandCB (XtPointer pObj, const int nMode,
 	      fCent0 = fPx2;
 	      fCent1 = fPx3;
 	    }
-	  sprintf(m_a255cText, "Center at: %.1f, %.1f\nPixel radius: %.1f\n"
+	  snprintf(m_a255cText, sizeof(m_a255cText), "Center at: %.1f, %.1f\nPixel radius: %.1f\n"
 		  "Mm radius: %.3f\n", fCent0, fCent1, fRadiusPx, fRadiusMM);
 	  vPutMessage(m_a255cText);
 	  if (RB_CIR2_MODE == nMode)
@@ -7229,7 +7229,7 @@ MainWindow::vErasePixels(const int nMode,
 	  fRadiusPx = (float)sqrt((double)fRadSq);
 
 	  s_fCircRad = fRadiusPx;
-	  sprintf(m_a255cText, "Line thickness set to %.1f pixels\n", 
+	  snprintf(m_a255cText, sizeof(m_a255cText), "Line thickness set to %.1f pixels\n", 
 		  s_fCircRad);
 	  m_fCircleRadius = s_fCircRad;
 
@@ -7435,7 +7435,7 @@ MainWindow::nNewHeader(const Cstring sHeaderFile, const bool bReadFiles)
   poHeader = new Cimage_header(sHeaderFile);
   if ( (NULL == poHeader) || (!poHeader->bIsAvailable()))
     {
-      sprintf(m_a255cText, "Header from file %s unavailable!\n", 
+      snprintf(m_a255cText, sizeof(m_a255cText), "Header from file %s unavailable!\n", 
 	      sHeaderFile.string());
       vPutMessage(m_a255cText);
       nStat = -1;

@@ -1,0 +1,46 @@
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+bin_darwin/
+.vscode/
+*.a
+
+DTTREK/dtfinddtpixhist DTTREK/dtindexdtrefine DTTREK/dtpredictdtstrategy DTTREK/dtmultistrategy
+DTTREK/dtintegratedtprofit DTTREK/dtcorrectdtreflnmerge DTTREK/dtbeammask
+DTTREK/dtscaleaveragedtorient DTTREK/dtheadereditdtrank DTTREK/dtranker
+DTTREK/dtnonunfeditdtaverage DTTREK/dtrek2raxis DTTREK/dtextractheader
+DTTREK/dtdezinger DTTREK/dtdarksubtract DTTREK/dtraxis DTTREK/dtcreate DTTREK/dtadd2 DTTREK/dtcompare 
+DTTREK/dtcompose DTTREK/dtdecompose DTTREK/dtbin DTTREK/dtheadermerge 
+DTTREK/dtcell DTTREK/dtsmooth DTTREK/dtdistor 
+DTTREK/dtx2refln DTTREK/dtsbcdark DTTREK/dtsbcdarkmask DTTREK/dtrebatch DTTREK/dtdisplayupdate 
+DTTREK/sca2dtrek DTTREK/dtscale2sca
