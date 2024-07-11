@@ -35,12 +35,47 @@ bin_darwin/
 .vscode/
 *.a
 
-DTTREK/dtfinddtpixhist DTTREK/dtindexdtrefine DTTREK/dtpredictdtstrategy DTTREK/dtmultistrategy
-DTTREK/dtintegratedtprofit DTTREK/dtcorrectdtreflnmerge DTTREK/dtbeammask
-DTTREK/dtscaleaveragedtorient DTTREK/dtheadereditdtrank DTTREK/dtranker
-DTTREK/dtnonunfeditdtaverage DTTREK/dtrek2raxis DTTREK/dtextractheader
-DTTREK/dtdezinger DTTREK/dtdarksubtract DTTREK/dtraxis DTTREK/dtcreate DTTREK/dtadd2 DTTREK/dtcompare 
-DTTREK/dtcompose DTTREK/dtdecompose DTTREK/dtbin DTTREK/dtheadermerge 
-DTTREK/dtcell DTTREK/dtsmooth DTTREK/dtdistor 
-DTTREK/dtx2refln DTTREK/dtsbcdark DTTREK/dtsbcdarkmask DTTREK/dtrebatch DTTREK/dtdisplayupdate 
-DTTREK/sca2dtrek DTTREK/dtscale2sca
+DTTREK/dtaverage
+DTTREK/Cimage_header.o
+DTTREK/dtadd2
+DTTREK/dtbeammask
+DTTREK/dtbin
+DTTREK/dtcell
+DTTREK/dtcompare
+DTTREK/dtcompose
+DTTREK/dtcorrect
+DTTREK/dtcreate
+DTTREK/dtdarksubtract
+DTTREK/dtdecompose
+DTTREK/dtdezinger
+DTTREK/dtdisplayupdate
+DTTREK/dtdistor
+DTTREK/dtextractheader
+DTTREK/dtfind
+DTTREK/dtheaderedit
+DTTREK/dtheadermerge
+DTTREK/dtindex
+DTTREK/dtintegrate
+DTTREK/dtmultistrategy
+DTTREK/dtnonunfedit
+DTTREK/dtorient
+DTTREK/dtpixhist
+DTTREK/dtpredict
+DTTREK/dtprofit
+DTTREK/dtrank
+DTTREK/dtranker
+DTTREK/dtraxis
+DTTREK/dtrebatch
+DTTREK/dtrefine
+DTTREK/dtreflnmerge
+DTTREK/dtrek2raxis
+DTTREK/dtreksys.o
+DTTREK/dtsbcdark
+DTTREK/dtsbcdarkmask
+DTTREK/dtscaleaverage
+DTTREK/dtsmooth
+DTTREK/dtstrategy
+DTTREK/dtx2refln
+DTTREK/libdtrek_darwin.a
+DTTREK/Cimage_header.o
+DTTREK/dtreksys.o
