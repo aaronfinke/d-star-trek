@@ -33,7 +33,7 @@
 # Edit the next lines for your site
 #
 # Directory where OpenMotif is installed.
-MOTIFHOME  := /usr/local/Cellar/openmotif/2.3.8_2
+MOTIFHOME  := /opt/homebrew/opt/openmotif
 # Directory where CBF library is located.
 CBFHOME    := /Users/aaronfinke/CBFlib-0.9.6
 # Directory where PTypes library is located.
@@ -69,10 +69,12 @@ OSTYPE     = _$(OSTYPE_EXT.$(OS))
 GMAKE      = $(GMAKE.$(OS))
 MFILE      = Makefile.$(OS)
 INSTALLDIR = $(CURDIR)/bin$(OSTYPE)
-HOMEBREW   = /usr/local
+HOMEBREW   = /opt/homebrew
+# Directory where HDF5 is installed (needed for PCS NeXus TOF-Laue files).
+HDF5HOME   = /opt/homebrew/opt/hdf5
 
-CC  = /usr/local/opt/llvm/bin/clang++
-CXX = /usr/local/opt/llvm/bin/clang++
+CC  = /usr/bin/clang++
+CXX = /usr/bin/clang++
 # CC  = /usr/local/bin/g++-14
 # CXX = /usr/local/bin/g++-14
 
@@ -90,6 +92,7 @@ export CBFHOME
 export PTYPESHOME
 export INSTALLDIR
 export HOMEBREW
+export HDF5HOME
 
 $(info )
 all:

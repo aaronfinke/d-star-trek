@@ -56,6 +56,8 @@
 #include "Cfind.h"         // Class definition and prototypes
 #include "dtrekdefs.h"
 #include "Cstat.h"
+#include "CTOFLaue.h"
+#include "nexuspcs.h"
 #include "dtarray.h"
 
 
@@ -1908,6 +1910,148 @@ int Cfind::nMerge2DReflectionsWithTwins(Creflnlist* poNewList, bool bRejectOverl
 
 };
 
+int Cfind::nRefineTOF3D(const int nPad)
+{
+  // TOF-Laue (LANSCE PCS): after the per-channel 2D search and merging of
+  // spots in consecutive channels, measure each spot in a 3D box made of the
+  // spot window (-window) and +-nPad TOF channels around its centroid, read
+  // directly from the stitched NeXus volume.  As in the original PCS d*TREK,
+  // this gives the 3D centroid, the integrated intensity and the TOF width.
+  // Spots that fail are removed.  Each spot also gets its observed
+  // wavelength (fDetwavelength).
+
+  int         nRef, nNumRefs, nStat;
+  int         nDim0, nDim1, nNumChan;
+  int         a3nExt[3], a3nOrig[3];
+  float       a3fCent[3], a3fSize[3];
+  float       fInt, fSD, fB, fBSD;
+  int         nFI_Wave;
+  CPCSVolume *poVol = CPCSVolume::poGetInstance();
+  Crefln     *poRefln;
+
+  nNumChan = poVol->nGetNumChannels();
+  nDim0    = poVol->nGetDim0();
+  nDim1    = poVol->nGetDim1();
+  if ( (0 >= nNumChan) || (0 >= nDim0) || (0 >= nDim1) )
+    {
+      cout << "ERROR in Cfind::nRefineTOF3D: no TOF volume loaded.\n" << flush;
+      return (1);
+    }
+
+  CTOFLaue  oTOF(m_oHeader);
+  Cdetector oDetector(m_oHeader, "", TRUE, FALSE);
+  bool      bLambda = oTOF.bIsAvailable() && oDetector.bIsAvailable();
+
+  nFI_Wave = m_poReflnlist->nExpandGetField(Creflnlist::ms_sfDetWavelength);
+  (void) m_poReflnlist->nExpandGetField(Creflnlist::ms_sfObsRotWidth);
+  (void) m_poReflnlist->nExpandGetField(Creflnlist::ms_sfObsRotSigma);
+
+  a3nExt[0] = (0 < m_a2nSpotWindow[0]) ? m_a2nSpotWindow[0] : 20;
+  a3nExt[1] = (0 < m_a2nSpotWindow[1]) ? m_a2nSpotWindow[1] : 20;
+
+  nNumRefs = m_poReflnlist->nGetNumReflns();
+  for (nRef = 0; nRef < nNumRefs; nRef++)
+    {
+      poRefln    = m_poReflnlist->poGetRefln(nRef);
+      a3fCent[0] = poRefln->fGetField(m_poReflnlist->m_nFI_fObsPx0);
+      a3fCent[1] = poRefln->fGetField(m_poReflnlist->m_nFI_fObsPx1);
+      a3fCent[2] = poRefln->fGetField(m_poReflnlist->m_nFI_fObsRotMid);
+
+      // TOF range of the box: the merged spot width plus nPad channels on
+      // each side (as -pad in dtintegrate), so wide spots fit in the box.
+      float fSpotWidth = max(3.0f, poRefln->fGetField(m_poReflnlist->m_nFI_fObsRotWidth));
+      a3nOrig[0] = max(0, (int) a3fCent[0] - a3nExt[0] / 2);
+      a3nOrig[1] = max(0, (int) a3fCent[1] - a3nExt[1] / 2);
+      a3nOrig[2] = max(0, (int) (a3fCent[2] - 0.5f * fSpotWidth) - nPad);
+      int n0 = min(a3nExt[0], nDim0 - a3nOrig[0]);
+      int n1 = min(a3nExt[1], nDim1 - a3nOrig[1]);
+      int n2 = min((int) (a3fCent[2] + 0.5f * fSpotWidth) + nPad, nNumChan - 1) - a3nOrig[2] + 1;
+      if ( (3 > n0) || (3 > n1) || (1 > n2) )
+        {
+          poRefln->vSetIntensity(-999.0f);
+          continue;
+        }
+
+      C3Ddata o3Ddata(n0, n1, n2, a3nOrig[0], a3nOrig[1], a3nOrig[2], e3Ddata_float);
+      for (int k = 0; k < n2; k++)
+        {
+          const float *pfChan = poVol->pfGetChannel(a3nOrig[2] + k);
+          for (int j = 0; j < n1; j++)
+            for (int i = 0; i < n0; i++)
+              o3Ddata.vSetValue(pfChan[(size_t) (a3nOrig[1] + j) * nDim0 + a3nOrig[0] + i],
+                                i, j, k);
+        }
+      o3Ddata.vSetFilled(n0, n1, n2);
+      if (m_bIncludeSat)
+        o3Ddata.m_bIncludeSat = TRUE;
+
+      // As C3Ddata::nCalcGetPeakInfo(), but with the expected TOF width of
+      // the spot (from the merged 2D spots) instead of the whole box depth,
+      // so that a spot that is not exactly centered in the box is accepted.
+
+      float fWidth = poRefln->fGetField(m_poReflnlist->m_nFI_fObsRotWidth);
+      fWidth = min((float) n2 - 0.5f, max(3.0f, fWidth));
+      ((C3DdataOutput&) o3Ddata).vInit();
+      o3Ddata.m_bSpotChase = FALSE;
+      nStat = o3Ddata.nCalcMask(a3fCent, fWidth);   // Absolute coordinates
+      o3Ddata.vGetCentroid(a3fCent);
+      o3Ddata.vGetPeakSize(a3fSize);
+      fInt = o3Ddata.fGetPeakIntensity();
+      fSD  = o3Ddata.fGetPeakIntensitySigma();
+      fB   = o3Ddata.fGetPerPixelBackground();
+      fBSD = o3Ddata.fGetPerPixelBackgroundSigma();
+
+      // The TOF range of the box may cut a long spot; that is not an error here
+      nStat = nStat & ~((1 << Crefln::ms_nErrorOnEdge2) | (1 << Crefln::ms_nErrorUnaccountedPix));
+
+      if (   (0 != nStat) || (0.0f >= fSD) || (0.0f == a3fCent[0])
+          || (fInt / fSD < m_fSigma) )
+        {
+          poRefln->vSetIntensity(-999.0f);
+          continue;
+        }
+
+      a3fCent[0] += (float) a3nOrig[0];
+      a3fCent[1] += (float) a3nOrig[1];
+      a3fCent[2] += (float) a3nOrig[2];
+
+      poRefln->vSetIntensity(fInt);
+      poRefln->vSetSigmaI(fSD);
+      poRefln->vSetField(m_poReflnlist->m_nFI_fObsPx0, a3fCent[0]);
+      poRefln->vSetField(m_poReflnlist->m_nFI_fObsPx1, a3fCent[1]);
+      poRefln->vSetField(m_poReflnlist->m_nFI_fObsRotMid, a3fCent[2]);
+      poRefln->vSetField(m_poReflnlist->m_nFI_fObsRotWidth, a3fSize[2]);
+      poRefln->vSetField(m_poReflnlist->m_nFI_fObsRotSigma, o3Ddata.fGetRotationSigma());
+      if (0 <= m_poReflnlist->m_nFI_fObsSharpness)
+        poRefln->vSetField(m_poReflnlist->m_nFI_fObsSharpness, o3Ddata.fGetPeakSharpness());
+      if (0 <= m_poReflnlist->m_nFI_fBackground)
+        poRefln->vSetField(m_poReflnlist->m_nFI_fBackground, fB);
+      if (0 <= m_poReflnlist->m_nFI_fBackgroundSigma)
+        poRefln->vSetField(m_poReflnlist->m_nFI_fBackgroundSigma, fBSD);
+
+      if (bLambda)
+        {
+          double dLambda;
+          double a3fS[3];
+          float  a3fMM[3];
+          if (0 == oDetector.nCalcTOFLaueObs(oTOF, a3fCent[0], a3fCent[1], a3fCent[2],
+                                             &dLambda, a3fMM, a3fS))
+            poRefln->vSetField(nFI_Wave, (float) dLambda);
+        }
+    }
+
+  // Remove the spots that failed
+
+  for (nRef = m_poReflnlist->nGetNumReflns() - 1; nRef >= 0; nRef--)
+    if (-999.0f == m_poReflnlist->poGetRefln(nRef)->fGetIntensity())
+      m_poReflnlist->nDelete(nRef);
+
+  cout << "TOF-Laue: " << m_poReflnlist->nGetNumReflns() << " of " << nNumRefs
+       << " merged spots measured in 3D boxes of " << a3nExt[0] << " x " << a3nExt[1]
+       << " pixels x (spot width + 2 x " << nPad << ") TOF channels.\n" << flush;
+  return (0);
+}
+
 int Cfind::nMerge2DReflections(Creflnlist* poNewList, bool bRejectOverlappedDifferentHKL)
 {
     int     nRef  = 0;
@@ -2258,6 +2402,11 @@ int  Cfind::nWrite(Creflnlist& oList,Cstring& sName) {
     (void) oList.nSelectField(eReflnField_float_type,
         oList.m_nFI_fDetResolution, char(0),
         pcSelectFields);
+    // TOF-Laue observed wavelength
+    if (0 <= oList.nGetFieldIndex(Creflnlist::ms_sfDetWavelength))
+      (void) oList.nSelectField(eReflnField_float_type,
+          oList.nGetFieldIndex(Creflnlist::ms_sfDetWavelength), char(0),
+          pcSelectFields);
     (void) oList.nSelectField(eReflnField_float_type,
         oList.m_nFI_fEllipsoidA00, char(0),
         pcSelectFields);

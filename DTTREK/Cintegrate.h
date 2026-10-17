@@ -59,6 +59,7 @@
 #include "Csource.h"
 #include "Cpredict.h"
 #include "Crefine.h"
+#include "CTOFLaue.h"
 #include "C3Ddata.h"
 #include "Cspacegroup.h"
 #include "Cstring.h"
@@ -127,6 +128,26 @@ public:
   int         m_nProfitMaxImageRange;   // Maximum image range for profile fitting (passed to Cprofit2D via nProfileFit()).
 
   int         m_nVerbose;               // Verbosity level for debugging and such
+
+  // TOF-Laue (LANSCE PCS): the images of the scan are TOF channels of one
+  // NeXus file, reflections are predicted for a stationary crystal and each
+  // has its own wavelength.
+  bool        m_bTOFLaue;
+  CTOFLaue    m_oTOFLaue;
+  int         m_a6nHKLLimits[6];        // -h -k -l: hmax hmin kmax kmin lmax lmin
+  int         m_a4nRect[4];             // -rect: px0min px1min px0max px1max
+  bool        m_bRect;
+  bool        m_bHKLLimits;
+  int         m_nTOFProfileSwapCount;   // Strong spots needed before the
+                                        // detector peak profiles are used
+  bool        m_bTOFSum;                // TOF-Laue summation integration (-tofint sum)
+  float       m_fTOFPeakRadius;         // Peak disk radius (pixels, -tofradius)
+  float       m_fTOFBackInner;          // Background annulus from radius + this ...
+  float       m_fTOFBackOuter;          // ... to radius + this (pixels)
+  int         m_nFI_fTOFDetWave;        // fDetwavelength field of the output list
+  int         nIntegrateTOFSum(Cpredict *poPredict, Cdetector *poDetector,
+                               Creflnlist *poReflnlist);
+
   int         m_nProfitFlag;            // Flag to write profiles or not
   int         m_nPad3D;                 // Image padding needed for 3D method 
   double      m_fPad3D;                 // Image padding needed for 3D method.

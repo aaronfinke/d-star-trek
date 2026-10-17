@@ -189,6 +189,9 @@ void vSetResolution(const float fResoMin, const float fResoMax);
 int nMerge2DReflections(Creflnlist* poNewList, bool bRejectOverlappedDifferentHKL=false);
 int nMerge2DReflectionsWithTwins(Creflnlist* poNewList, bool bRejectOverlappedDifferentHKL=false);
 
+// TOF-Laue: measure merged spots in 3D boxes (window x +-nPad TOF channels)
+int nRefineTOF3D(const int nPad);
+
 int nMerge2D_OverlapReject(Creflnlist& oReflnlist,itr<int>& anRefsIn,Crefln& oNewRef,Creflnlist& oNewList);
 
 #define DTREK_DTFIND_FC2D_LOOK_FOR_WEAK_SPOTS		            0x0001

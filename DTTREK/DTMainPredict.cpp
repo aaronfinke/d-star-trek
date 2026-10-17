@@ -321,6 +321,27 @@ int CDTMainPredict::nExecute(unsigned int argc, char* argv[])
 	{
 	  bDoList = TRUE;
 	}
+      else if ("-wave" == sTemp)
+	{
+	  // TOF-Laue: wavelength range (either order), as in the PCS d*TREK
+	  float a2fWave[2];
+	  i++;
+	  for (j=0; (j < 2) && (i < argc); j++, i++)
+	    {
+	      nTemp = sscanf(argv[i], "%f", &a2fWave[j]);
+	      if (nTemp != 1)
+		DTREK_ERROR(6, sInvalidArgument);
+	    }
+	  i--;
+	  if (j != 2)
+	    {
+	      DTREK_ERROR(5, sMissingOption);
+	    }
+	  if (poPredict->bIsTOFLaue())
+	    poPredict->poGetTOFLaue()->vSetLambdaRange(a2fWave[0], a2fWave[1]);
+	  else
+	    cout << "WARNING: -wave ignored, the header does not describe TOF-Laue data.\n";
+	}
       else if (   ("-mergeheadersscan" == sTemp)
 	       || ("-differentscan" == sTemp) )
 	{
@@ -446,6 +467,16 @@ int CDTMainPredict::nExecute(unsigned int argc, char* argv[])
     Cstring     sError("");
     bDoOverlap = bParseReflnOverlapCheckParams(sError);
     /////////////////////////////////////////////////////
+
+    // TOF-Laue: without -rot or -seq predict for all TOF channels
+
+    if (poPredict->bIsTOFLaue() && (0 == afRotStart.size()) && (0 == anSeqNumStart.size()))
+    {
+        afRotStart + 0.0;
+        afRotEnd   + (double) poPredict->poGetTOFLaue()->nGetNumChannels();
+    }
+    if (poPredict->bIsTOFLaue())
+        poPredict->poGetTOFLaue()->vList();
 
     // Done with command line arguments so now go predict reflections!
 
@@ -794,6 +825,8 @@ void CDTMainPredict::vError(const int nErrorNum, const Cstring& sMessage)
        << "Command line options: Description:\n\n"
        << "sHeaderfile         Name of a file with an input header that has the scan\n"
        << "                    definition.\n\n"
+       << "-wave fLambda1 fLambda2\n"
+       << "                    TOF-Laue: wavelength range of the predicted reflections.\n\n"
        << "-mosaicity fMosaicity\n"
        << "                    Specify mosaicity constant\n\n"
        << "-differentscan  or\n"

@@ -61,6 +61,7 @@
 #include "Cintegrate.h"         // Class definition and prototypes
 #include "Crefine.h"
 #include "Cfind.h"
+#include "nexuspcs.h"
 
 #ifndef NO_X_WINDOWS
 #ifndef SSI_PC
@@ -125,6 +126,12 @@ Cintegrate::Cintegrate(Cimage_header *poHeaderIn, Creflnlist* poReflnlistOut)
   m_poScan->vInitSeqNum();
 
   m_poReflnlist      = poReflnlistOut;
+
+  if (CTOFLaue::bIsTOFLaue(*m_poHeader))
+    {
+      m_oTOFLaue.nInitValues(*m_poHeader);
+      m_bTOFLaue = m_oTOFLaue.bIsAvailable();
+    }
 
   //+2011-06-27 JWP
   // If this is a RAPID image, then make spotchase true
@@ -372,6 +379,19 @@ Cintegrate::nInitValues(void)
   m_nProfitMaxImageRange = 7;
 
   m_nVerbose         = 1;                   // Set verbose level
+  m_bTOFLaue         = FALSE;
+  m_nTOFProfileSwapCount = 20;
+  m_bTOFSum          = TRUE;
+  m_fTOFPeakRadius   = 3.5f;
+  m_fTOFBackInner    = 2.5f;
+  m_fTOFBackOuter    = 6.0f;
+  m_nFI_fTOFDetWave  = -1;
+  m_bHKLLimits       = FALSE;
+  for (int nx = 0; nx < 6; nx++)
+    m_a6nHKLLimits[nx] = 0;
+  m_bRect            = FALSE;
+  for (int nx = 0; nx < 4; nx++)
+    m_a4nRect[nx] = 0;
   m_nProfitFlag      = DTI_DO_NOT_PROFIT;   // Do not do any profile fitting.
   m_nPad3D           = 0;                   // No padding
   m_fPad3D           = 1.0;                 // No pad multiplier.
@@ -1000,6 +1020,19 @@ Cintegrate::nIntegrate(const int nNumImages)
   poRefine  = new Crefine  (poSource, poDetector, poCrystal, poCrysGonio,
                             m_poScan->m_poRotation);
   ANLSTOP(3);
+
+  if (m_bTOFLaue)
+    {
+      // Stationary crystal, polychromatic: wavelength-resolved prediction
+      // and refinement
+      poPredict->vSetTOFLaue(m_oTOFLaue);
+      if (m_bHKLLimits)
+        poPredict->vSetHKLLimits(m_a6nHKLLimits);
+      if (m_bRect)
+        poPredict->vSetRect(m_a4nRect);
+      poRefine->vSetTOFLaue(m_oTOFLaue);
+      m_oTOFLaue.vList();
+    }
 //  poRefine  = new Crefine(*m_poHeader, &oReflnlistRefine);
 
   // Give the reflection list the fields needed for predict and refine objects
@@ -1012,6 +1045,8 @@ Cintegrate::nIntegrate(const int nNumImages)
 
   ANLSTART(4);
   (void) nExpandReflnlist(poReflnlistL);
+  if (m_bTOFLaue)
+    m_nFI_fTOFDetWave = poReflnlistL->nExpandGetField(Creflnlist::ms_sfDetWavelength);
 
   ANLSTOP(4);
 
@@ -1349,7 +1384,14 @@ pre_refine_rollback:
       float a3fTempBuf[3];
       int nStatL;
       nStatL = poCrysGonio->nGetNum(m_poScan->m_poRotation->sGetName());
-      if (poCrysGonio->nGetRotVector(nStatL,&a3fTempBuf[0]))
+      if (m_bTOFLaue)
+        {
+          // Stationary crystal: no rotation axis is needed
+          a3fTempBuf[0] = 1.0f;
+          a3fTempBuf[1] = 0.0f;
+          a3fTempBuf[2] = 0.0f;
+        }
+      else if (poCrysGonio->nGetRotVector(nStatL,&a3fTempBuf[0]))
 	{
 	  cout << "ERROR, problem with rotation axis name: "
                << m_poScan->m_poRotation->sGetName() << "\n";
@@ -1394,7 +1436,16 @@ pre_refine_rollback:
            << nPercentFilesize << "% of the first image size." << endl << flush;
     }
 
+  // TOF-Laue: the whole scan is one NeXus volume in memory, so all
+  // reflections are predicted once and integrated by summation directly
+  // from the volume instead of image by image with shoeboxes.
+
+  bool bTOFSum = (m_bTOFLaue && m_bTOFSum);
+  if (bTOFSum && (0 == nStat))
+    nStat = nIntegrateTOFSum(poPredict, poDetector, poReflnlistL);
+
   while(   (0 == nStat)
+         && !bTOFSum
          && (oImageRotation.fGetRotEnd() < oScanRotation.fGetRotEnd())
          && (m_nCurrentImgNum < nNumImages)
        )
@@ -1603,7 +1654,13 @@ pre_refine_rollback:
 
 	      m_eSBdatatype      = e3Ddata_ushort;
 	      cout << "INFO: eImage_data_type is " << oImage.sGetDataType() << endl;
-	      if (eImage_I4 == oImage.m_oHeader.eGetImageDataType())
+	      if (eImage_realIEEE == oImage.m_oHeader.eGetImageDataType())
+		{
+		  // Float images (e.g. LANSCE PCS TOF channels, possibly
+		  // response corrected) must not be truncated to integers.
+		  m_eSBdatatype      = e3Ddata_float;
+		}
+	      else if (eImage_I4 == oImage.m_oHeader.eGetImageDataType())
 		{
 		  // We are going to make the C3Ddata float to start with
 		  // since this will save the expense of an extra conversion
@@ -2084,7 +2141,9 @@ pre_refine_rollback:
   //  if ((!nStat) && ((DTI_DO_2D_PROFIT & m_nProfitFlag))) {
   // Do the following to create a dtprofit.ref even if profile fitting not
   // called for.
+  // (Not for TOF-Laue data: this models rotation rocking curves.)
 
+    if (!m_bTOFLaue)
     {
       Cprofit2DSlices oProfit;
       nStat = oProfit.nLoadHeader(*m_poHeader);
@@ -2681,7 +2740,23 @@ Cintegrate::nBuildShoeboxes(Creflnlist *poReflnlist,
 
   nStat = nDeleteMarkedReflns(poReflnlist, ms_nDelFlag);
 
-  if (m_a2oDetectorProfiles[m_nProfileLoading].fGetAverageLevel()>=m_fTargetDetectorProfilesLevel) {
+  // TOF-Laue: the strong spots are too sparse on the long cylindrical
+  // detector to fill the profile mesh to the X-ray target level, and the
+  // spot footprint hardly changes over the detector.  Use the profiles
+  // once there are enough strong spots for a detector-wide average, and
+  // switch to a larger set whenever twice as many have been collected.
+  bool bSwapProfiles;
+  if (m_bTOFLaue)
+    {
+      bSwapProfiles = (m_a2oDetectorProfiles[m_nProfileLoading].nGetNumContrib()
+                       >= m_nTOFProfileSwapCount);
+      if (bSwapProfiles)
+        m_nTOFProfileSwapCount *= 2;
+    }
+  else
+    bSwapProfiles = (m_a2oDetectorProfiles[m_nProfileLoading].fGetAverageLevel()
+                     >= m_fTargetDetectorProfilesLevel);
+  if (bSwapProfiles) {
       m_fTargetDetectorProfilesLevel = 3.5;
       m_a2oDetectorProfiles[m_nProfileLoading].nPrintPeakAreas(false,m_fRotIncrement);
       m_nProfileReading = m_nProfileLoading;
@@ -3086,7 +3161,12 @@ Cintegrate::nPass0Shoebox(Crefln *poRefln, Cdetector *poDetector)
       
       fRLP = 1.0f / (poRefln->fGetField(poRefln->m_poReflnlist->m_nFI_fLorentz)
           * poRefln->fGetField(poRefln->m_poReflnlist->m_nFI_fPolarz));
-      
+
+      // TOF-Laue: fCalc_lorentz is 1/sin^2(theta) and fCalc_polarz is 1,
+      // so this divides by the geometric part of the Laue Lorentz factor,
+      // as the original PCS d*TREK did.  The lambda^4 part is left to the
+      // wavelength normalization (dtlauenorm, LAUENORM).
+
       // Apply any oblique incidence correction
       // See for example: Zaleski, Wu & Coppens (1998)
       //                     J. Appl. Cryst. 31, 302-304.
@@ -3130,7 +3210,9 @@ Cintegrate::nPass0Shoebox(Crefln *poRefln, Cdetector *poDetector)
           &a3fVDC[0],&a3fVDC[1],&a3fVDC[2]))
           return 1 << Crefln::ms_nErrorIntProblem;
       
-      vConvRotVec3DMat3D(-poRefln->fGetField(poRefln->m_poReflnlist->m_nFI_fCalcRotMid), m_a3fRotVec, &a3x3fRotMatHKL[0][0]);
+      // (TOF-Laue: the crystal does not rotate; the "rotation" is a TOF channel)
+      vConvRotVec3DMat3D(m_bTOFLaue ? 0.0f : -poRefln->fGetField(poRefln->m_poReflnlist->m_nFI_fCalcRotMid),
+                         m_a3fRotVec, &a3x3fRotMatHKL[0][0]);
       //m_poScan->m_poRotation->vCalcGetRotMatrix(-poRefln->fGetField(poRefln->m_poReflnlist->m_nFI_fCalcRotMid),
       //    &a3x3fRotMatHKL[0][0]);
       
@@ -3159,8 +3241,13 @@ Cintegrate::nPass0Shoebox(Crefln *poRefln, Cdetector *poDetector)
       fTemp     = ((fTemp - m_fOverallRotStart) / m_fRotIncrement);
       nBatchNum = (int)(fTemp / (float)m_nImagesPerScaleBatch) + 1;
       
-      nBatchNum = (nBatchNum * m_nImagesPerScaleBatch) 
+      nBatchNum = (nBatchNum * m_nImagesPerScaleBatch)
           - 1 + m_anSeqNum[0];
+
+      // TOF-Laue: one file is one crystal setting, so one batch per file
+      // (use -batchprefix to distinguish settings)
+      if (m_bTOFLaue)
+          nBatchNum = 1;
       
 //mrp      if (10000 > nBatchNum)
       nBatchNum %= 10000; //mrp
@@ -3419,7 +3506,10 @@ Cintegrate::nCalcMask(Crefln *poRefln, Cdetector *poDetector,
       poShoebox->m_bSpotChase            = m_bSpotChase;
       poShoebox->m_nMinPeakRad           = m_nMinPeakRad;
       poShoebox->m_nIntegrateWeakFlag    = m_nIntegrateWeakFlag;
-      
+      // TOF-Laue: without profile fitting, weak TOF slices are summed
+      // (the rotation-oriented profile post-pass is not used).
+      poShoebox->m_bSumWeakWithoutProfit = m_bTOFLaue;
+
       nStat = poShoebox->nCalcMask(a3fCent, fWidth);
 
       // If we received an error status, 
@@ -3617,7 +3707,13 @@ Cintegrate::nCalcMask(Crefln *poRefln, Cdetector *poDetector,
           fObsCent = fObsCent;
       };
      
-      poRefln->vSetField(poRefln->m_poReflnlist->m_nFI_fObsRotMid, (float) fObsCent);          
+      // TOF-Laue: the TOF centroid of a weak spot is dominated by noise and
+      // by the long moderator tail inside the box, so use the predicted
+      // channel, as is done above for the pixel position.
+      if (m_bTOFLaue && (nStat & (1 << Crefln::ms_nErrorTooFewPix)))
+          fObsCent = fCalcCent;
+
+      poRefln->vSetField(poRefln->m_poReflnlist->m_nFI_fObsRotMid, (float) fObsCent);
       poShoebox->vGetPeakSize(a3fWidth);
       poRefln->vSetField(m_nFI_fWidth0, a3fWidth[0]);
       poRefln->vSetField(m_nFI_fWidth1, a3fWidth[1]);
@@ -5059,4 +5155,249 @@ int  Cintegrate::nDoPrefind()
     delete  poRefine;
 
     return nStat;
+}
+
+int
+Cintegrate::nIntegrateTOFSum(Cpredict *poPredict, Cdetector *poDetector,
+                             Creflnlist *poReflnlist)
+{
+  // TOF-Laue integration by summation.  The NeXus file of a PCS run is one
+  // (x, y, TOF) volume held in memory, so all reflections are predicted
+  // for the whole TOF range at once and each one is integrated directly
+  // from the volume:
+  //   peak:        pixels within m_fTOFPeakRadius of the predicted position,
+  //                over the predicted TOF window (channel fractions at the
+  //                ends), as the original PCS d*TREK predicted it
+  //   background:  per channel, the mean of the valid pixels in the annulus
+  //                from radius + m_fTOFBackInner to radius + m_fTOFBackOuter
+  //   sigma:       counting statistics of the peak and the background
+  // The intensity is divided by fCalc_lorentz (1/sin^2 theta), as in the
+  // rest of dtintegrate.  Observed centroids are computed from the
+  // background-subtracted counts (the predicted values are kept for weak
+  // reflections).
+
+  int     nStat;
+  Cstring sImageName;
+
+  m_poScan->vSetSeqNum(m_anSeqNum[0]);
+  m_poScan->nGetImageName(&sImageName);
+  CPCSVolume *poVol = CPCSVolume::poGetInstance();
+  if (0 != poVol->nLoad(sImageName))
+    {
+      cout << "ERROR in Cintegrate::nIntegrateTOFSum: cannot load " << sImageName
+           << '\n' << flush;
+      return (1);
+    }
+
+  const int nDim0    = poVol->nGetDim0();
+  const int nDim1    = poVol->nGetDim1();
+  const int nNumChan = poVol->nGetNumChannels();
+  const size_t nPix  = (size_t) nDim0 * nDim1;
+
+  // Predict all reflections of the TOF range of the scan
+
+  Crotation oRotation(*m_poScan->m_poRotation);
+  oRotation.vSetRotStart(m_fOverallRotStart);
+  oRotation.vSetRotEnd(m_fOverallRotEnd);
+  poReflnlist->vDeleteAll();
+  nStat = poPredict->nPredict(&oRotation, poReflnlist);
+  if (0 != nStat)
+    {
+      cout << "ERROR in Cintegrate::nIntegrateTOFSum: prediction failed.\n" << flush;
+      return (nStat);
+    }
+
+  int nNumRefs = poReflnlist->nGetNumReflns();
+  m_nNumPredictedUnique = nNumRefs;
+  printf("\nTOF-Laue summation integration of %d predicted reflections\n"
+         "  peak radius %.2f px, background annulus %.2f to %.2f px\n\n",
+         nNumRefs, m_fTOFPeakRadius, m_fTOFPeakRadius + m_fTOFBackInner,
+         m_fTOFPeakRadius + m_fTOFBackOuter);
+
+  const float fRPeak  = m_fTOFPeakRadius;
+  const float fRIn    = m_fTOFPeakRadius + m_fTOFBackInner;
+  const float fROut   = m_fTOFPeakRadius + m_fTOFBackOuter;
+  const int   nHalf   = (int) ceil(fROut) + 1;
+  char        a100cBatch[100];
+
+  snprintf(a100cBatch, sizeof(a100cBatch), "%s%04d", m_sBatchPrefix.string(), 1);
+  Cstring sBatch = a100cBatch;
+
+  for (int nRef = 0; nRef < nNumRefs; nRef++)
+    {
+      Crefln *poRefln = poReflnlist->poGetRefln(nRef);
+      int    nErr     = 0;
+      double dPx0     = poRefln->fGetField(poReflnlist->m_nFI_fCalcPx0);
+      double dPx1     = poRefln->fGetField(poReflnlist->m_nFI_fCalcPx1);
+      double dChan    = poRefln->fGetField(poReflnlist->m_nFI_fCalcRotMid);
+      double dWidth   = poRefln->fGetField(poReflnlist->m_nFI_fCalcRotWidth);
+      double dLo      = dChan - 0.5 * dWidth;
+      double dHi      = dChan + 0.5 * dWidth;
+
+      int nC0 = (int) floor(dLo);
+      int nC1 = (int) floor(dHi);
+      if (0 > nC0)
+        (void) nSetErrorMask(Crefln::ms_nErrorPartialStart, TRUE, &nErr);
+      if (nNumChan <= nC1)
+        (void) nSetErrorMask(Crefln::ms_nErrorPartialEnd, TRUE, &nErr);
+
+      // The box is clipped at the detector edges; only a peak disk that
+      // crosses an edge is an error (the background needs 10 pixels).
+      if ( (dPx0 - fRPeak < 0.0) || (dPx0 + fRPeak > (double) nDim0) )
+        (void) nSetErrorMask(Crefln::ms_nErrorOnEdge0, TRUE, &nErr);
+      if ( (dPx1 - fRPeak < 0.0) || (dPx1 + fRPeak > (double) nDim1) )
+        (void) nSetErrorMask(Crefln::ms_nErrorOnEdge1, TRUE, &nErr);
+      int nI0 = std::max(0, (int) floor(dPx0) - nHalf);
+      int nI1 = std::min(nDim0 - 1, (int) floor(dPx0) + nHalf);
+      int nJ0 = std::max(0, (int) floor(dPx1) - nHalf);
+      int nJ1 = std::min(nDim1 - 1, (int) floor(dPx1) + nHalf);
+
+      double dI = 0.0, dVar = 0.0, dBackSum = 0.0, dBackW = 0.0;
+      double a3dCent[3] = {0.0, 0.0, 0.0}, dCentW = 0.0, dChan2 = 0.0;
+      int    nPeakPix = 0;
+
+      if (0 == nErr)
+        {
+          for (int nC = nC0; (nC <= nC1) && (0 == nErr); nC++)
+            {
+              double dF = std::min((double) nC + 1.0, dHi) - std::max((double) nC, dLo);
+              if (0.0 >= dF)
+                continue;
+              const float *pfChan = poVol->pfGetChannel(nC);
+              double dPeakSum = 0.0, dBack = 0.0;
+              int    nPk = 0, nBk = 0;
+              for (int j = nJ0; j <= nJ1; j++)
+                for (int i = nI0; i <= nI1; i++)
+                  {
+                    double dR = sqrt( (i + 0.5 - dPx0) * (i + 0.5 - dPx0)
+                                    + (j + 0.5 - dPx1) * (j + 0.5 - dPx1) );
+                    float  fV = pfChan[(size_t) j * nDim0 + i];
+                    if (dR <= fRPeak)
+                      {
+                        if (0.0f > fV)
+                          {
+                            (void) nSetErrorMask(Crefln::ms_nErrorNonunfB, TRUE, &nErr);
+                            break;
+                          }
+                        dPeakSum += fV;
+                        nPk++;
+                      }
+                    else if ( (dR > fRIn) && (dR <= fROut) && (0.0f <= fV) )
+                      {
+                        dBack += fV;
+                        nBk++;
+                      }
+                  }
+              if (0 != nErr)
+                break;
+              if (10 > nBk)
+                {
+                  (void) nSetErrorMask(Crefln::ms_nErrorBackground, TRUE, &nErr);
+                  break;
+                }
+              dBack /= (double) nBk;
+              double dS = dPeakSum - dBack * nPk;
+              dI       += dF * dS;
+              dVar     += dF * dF * (std::max(dPeakSum, 0.0) + nPk * nPk * dBack / (double) nBk);
+              dBackSum += dF * dBack;
+              dBackW   += dF;
+              nPeakPix  = nPk;
+
+              // Centroid from the positive, background-subtracted counts
+              for (int j = nJ0; j <= nJ1; j++)
+                for (int i = nI0; i <= nI1; i++)
+                  {
+                    double dR = sqrt( (i + 0.5 - dPx0) * (i + 0.5 - dPx0)
+                                    + (j + 0.5 - dPx1) * (j + 0.5 - dPx1) );
+                    if (dR > fRPeak)
+                      continue;
+                    double dW = dF * (pfChan[(size_t) j * nDim0 + i] - dBack);
+                    if (0.0 >= dW)
+                      continue;
+                    a3dCent[0] += dW * (i + 0.5);
+                    a3dCent[1] += dW * (j + 0.5);
+                    a3dCent[2] += dW * (nC + 0.5);
+                    dChan2     += dW * (nC + 0.5) * (nC + 0.5);
+                    dCentW     += dW;
+                  }
+            }
+        }
+
+      poRefln->vSetField(poReflnlist->m_nFI_nPackedHKL, 0);
+      poRefln->vSetField(poReflnlist->m_nFI_sBatch, sBatch);
+
+      if ( (0 != nErr) || (0 >= dBackW) || (0 == nPeakPix) )
+        {
+          if (0 == nErr)
+            (void) nSetErrorMask(Crefln::ms_nErrorIntProblem, TRUE, &nErr);
+          poRefln->vSetIntensity(-999.0f);
+          poRefln->vSetSigmaI(-999.0f);
+          poRefln->vSetField(m_nFI_nErrorFlag, nErr);
+          m_nNumRefBadErrors++;
+          if (NULL != m_pFReflnBadOut)
+            poRefln->vWrite(m_pFReflnBadOut, m_pcSelectFields);
+          continue;
+        }
+
+      double dSig    = sqrt(std::max(dVar, 1.0e-6));
+      double dLor    = poRefln->fGetField(poReflnlist->m_nFI_fLorentz);
+      double dRLP    = (0.0 < dLor) ? 1.0 / dLor : 1.0;
+      bool   bStrong = ( (3.0 * dSig <= dI) && (0.0 < dCentW) );
+      if (bStrong)
+        m_nNumRefNoErrors++;
+      else
+        m_nNumRefWeak++;
+
+      double dObsPx0  = bStrong ? a3dCent[0] / dCentW : dPx0;
+      double dObsPx1  = bStrong ? a3dCent[1] / dCentW : dPx1;
+      double dObsChan = bStrong ? a3dCent[2] / dCentW : dChan;
+      double dObsWid  = 0.0;
+      if (bStrong)
+        dObsWid = sqrt(12.0 * std::max(0.0, dChan2 / dCentW - dObsChan * dObsChan));
+
+      poRefln->vSetIntensity((float) (dI * dRLP));
+      poRefln->vSetSigmaI((float) (dSig * dRLP));
+      poRefln->vSetField(poReflnlist->m_nFI_fObsPx0, (float) dObsPx0);
+      poRefln->vSetField(poReflnlist->m_nFI_fObsPx1, (float) dObsPx1);
+      poRefln->vSetField(poReflnlist->m_nFI_fObsRotMid, (float) dObsChan);
+      poRefln->vSetField(poReflnlist->m_nFI_fObsRotWidth, (float) dObsWid);
+      if (0 <= poReflnlist->m_nFI_fObsRotSigma)
+        poRefln->vSetField(poReflnlist->m_nFI_fObsRotSigma, (float) (dObsWid / sqrt(12.0)));
+      poRefln->vSetField(poReflnlist->m_nFI_fBackground, (float) (dBackSum / dBackW));
+      poRefln->vSetField(poReflnlist->m_nFI_fBackgroundSigma,
+                         (float) sqrt(std::max(0.0, dBackSum / dBackW)));
+      poRefln->vSetField(m_nFI_nErrorFlag, nErr);
+
+      // Scattered beam vector at the predicted position and the observed
+      // wavelength at the observed TOF channel
+
+      double dLambdaObs, a3dS[3], dL2;
+      float  a3fMM[3];
+      if (0 == poDetector->nCalcTOFLaueObs(m_oTOFLaue, (float) dPx0, (float) dPx1, dObsChan,
+                                           &dLambdaObs, a3fMM, a3dS, &dL2))
+        {
+          float a3fS[3], a3fSrot[3], a3fS0rot[3];
+          for (int k = 0; k < 3; k++)
+            a3fS[k] = (float) (a3dS[k] * m_fLenS0);
+          vMulMat3DVec3D(m_a3x3fInvCrysRotGonMat, a3fS, a3fSrot);
+          vMulMat3DVec3D(m_a3x3fInvCrysRotGonMat, m_a3fS0, a3fS0rot);
+          for (int k = 0; k < 3; k++)
+            {
+              poRefln->vSetField(poReflnlist->m_nFI_fSvec[k], a3fSrot[k]);
+              poRefln->vSetField(poReflnlist->m_nFI_fS0vec[k], a3fS0rot[k]);
+            }
+          if (0 <= m_nFI_fTOFDetWave)
+            poRefln->vSetField(m_nFI_fTOFDetWave, (float) dLambdaObs);
+        }
+
+      poRefln->vWrite(m_pFReflnFileOut, m_pcSelectFields);
+      m_nReflnFileOutCount++;
+      if (ferror(m_pFReflnFileOut))
+        return (1);
+    }
+
+  printf("  %d integrated (%d with I > 3 sigma(I)), %d rejected\n\n",
+         m_nNumRefNoErrors + m_nNumRefWeak, m_nNumRefNoErrors, m_nNumRefBadErrors);
+  fflush(stdout);
+  return (0);
 }

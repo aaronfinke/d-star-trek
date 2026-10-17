@@ -107,6 +107,7 @@ struct DTREK_EXPORT C3DdataInput {
   bool    m_bSpotChase;             // INPUT  Do we chase the starting spot centroid?
   bool    m_bUsePerSliceBackground; // INPUT  Do we use a per-slice background, or an overall background?
   bool    m_bProfileFitWeak;		// INPUT  Determines if we profile fit weak spots.
+  bool    m_bSumWeakWithoutProfit;  // INPUT  Weak slices without a profile-fitted intensity use the summation intensity (TOF-Laue)
   bool    m_bIncludeSat;            // INPUT  Do we include saturated reflections?
   float   m_fMinProfitPeakIntensity;// INPUT  Minimum intensity to contribute to profile fitting.
   int     m_a3nHKL[3];              // INPUT  Only needed if we are enqueueing spots into the profile fitter.
@@ -448,6 +449,7 @@ public:
     int  nInitPeakAreas(int nDim0,int nDim1);
     int  nPrintPeakAreas(bool bComputeOnly,double fRotIncrement);
     double fGetAverageLevel() { return m_oDetectorAreas.fGetAverageLevel(); }
+    int  nGetNumContrib() { return m_oDetectorAreas.nGetNumContrib(); }
 
     int nInitValues(Cimage_header& oHeader);
     int nUpdateHeader(Cimage_header *poHeader);

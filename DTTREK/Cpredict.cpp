@@ -84,6 +84,18 @@ Cpredict::Cpredict(Cimage_header& oHeader,
     m_poReflnlist   = poReflnlistIn;
 
     m_bNewReflnlist = FALSE;
+
+    if (CTOFLaue::bIsTOFLaue(oHeader))
+    {
+        m_oTOFLaue.nInitValues(oHeader);
+        m_bTOFLaue = m_oTOFLaue.bIsAvailable();
+    }
+}
+
+void Cpredict::vSetTOFLaue(const CTOFLaue& roTOFLaue)
+{
+    m_oTOFLaue = roTOFLaue;
+    m_bTOFLaue = m_oTOFLaue.bIsAvailable();
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 Cpredict::Cpredict(Csource*      poSourceIn, 
@@ -248,9 +260,18 @@ int Cpredict::nInitValues(void)
   m_nScanNumber = 0;
 
   m_sStrategyPrefix = "";
-  
+
   for(int ii= 0; ii < 3; ii++)
       m_a3fLocalDN[ii] = 0.0;
+
+  m_bTOFLaue            = FALSE;
+  m_nFI_fCalcWavelength = -1;
+  m_bHKLLimits          = FALSE;
+  for (int i = 0; i < 6; i++)
+      m_a6nHKLLimits[i] = 0;
+  m_bRect               = FALSE;
+  for (int i = 0; i < 4; i++)
+      m_a4nRect[i] = 0;
 
   return 0;
 }
@@ -477,6 +498,8 @@ int Cpredict::nPredict(Creflnlist& oListIn,double fPad) {
           nRotAxis = oListIn[nRef].nGetField(oListIn.m_nFI_nGonioRotAxis) - 1;
         else
           nRotAxis = m_poCrysGonio->nGetNum(m_poRotation->sGetName());
+        if ( (0 > nRotAxis) || (nRotAxis >= m_poCrysGonio->m_nNumRotValues) )
+          nRotAxis = 0;   // Unknown axis name (e.g. TOF-Laue headers): avoid a bad index
 
 
         // See if we have had a change in variables.
@@ -572,6 +595,33 @@ int Cpredict::nPredict(Crotation *poRotationIn, Creflnlist *poReflnlistIn)
     }
 
     nStat = nExpandReflnlist();
+
+    if (m_bTOFLaue)
+    {
+        // Stationary crystal, polychromatic beam: the rotation range is a
+        // range of TOF channels.
+
+        for(int nCrystal = 0; nCrystal < m_nNumCrystals; nCrystal++)
+        {
+            for(int nTwinLaw = 0; nTwinLaw <= m_ppoCrystal[nCrystal]->m_nTwinLaws; nTwinLaw++)
+            {
+                if( !m_pbActive[nCrystal] )
+                    continue;
+
+                nStat = nSetupSourceCrystal(nCrystal, nTwinLaw);
+                if (0 != nStat)
+                {
+                    cout << "ERROR Cpredict:nPredict, setup of source and crystal failed: " << nStat << endl;
+                    return nStat;
+                }
+                nStat = nPredictTOFLaue(m_poRotation->fGetRotStart(), m_poRotation->fGetRotEnd());
+                if (0 != nStat)
+                    return nStat;
+            }
+        }
+        m_poReflnlist->vSetState(eReflnlist_predicted_state);
+        return 0;
+    }
 
     if( m_bDoFastPrediction && m_nNumCrystals == 1 && m_ppoCrystal[0]->m_nTwinLaws == 0 )
     {
@@ -2327,6 +2377,211 @@ int Cpredict::nPredictInsertRefln(int nHKL[3],
 }
 
 
+int Cpredict::nPredictTOFLaue(const double fChanStart, const double fChanEnd)
+{
+    // Wavelength-resolved (time-of-flight) Laue prediction for a stationary
+    // crystal, in the spirit of LAUEGEN.  The source and crystal must already
+    // be set up (nSetupSourceCrystal).  The source wavelength in the header
+    // is 1, so m_afGonCrysMatrix * hkl is the reciprocal lattice vector X in
+    // 1/Angstrom.  For each reflection with d >= dmin:
+    //
+    //    lambda = 2 (X . S0) / |X|^2           (Bragg condition, S0 to source)
+    //    XR     = lambda * X                   (dimensionless, on the Ewald sphere)
+    //
+    // XR is projected onto the detector with the usual code, and the TOF
+    // channel follows from lambda and the flight path L1 + L2.  Reflections
+    // whose channel range overlaps [fChanStart, fChanEnd] are kept.
+
+    int     nStat;
+    int     nDet;
+    int     nH, nK, nL;
+    int     a3nHKL[3];
+    int     a3nMax[3];
+    int     nFI_Wave;
+    double  dResoMin, dResoMax;
+    double  dDstarSqMin, dDstarSqMax;
+    double  a3fHKL[3], a3fX[3];
+    double  dDstarSq, dXdotS0, dLambda, dSinTheta;
+    double  dL2, dChan, dWidth;
+    double  dChanLo, dChanHi;
+    double  fObliqueIncidenceCorrection;
+    bool    bNonunfReject;
+    Cspatial *poSpatial;
+
+    if (!m_bTOFLaue)
+        return (1);
+
+    dChanLo = min(fChanStart, fChanEnd);
+    dChanHi = max(fChanStart, fChanEnd);
+
+    nFI_Wave = m_poReflnlist->nExpandGetField(Creflnlist::ms_sfCalcWavelength);
+
+    // No incommensurate reciprocal shift in Laue mode
+    m_afRecipShiftRotated[0] = m_afRecipShiftRotated[1] = m_afRecipShiftRotated[2] = 0.0;
+
+    Crefln oRefln(m_poReflnlist);
+
+    for (nDet = 0; nDet < m_nNumDetectors; nDet++)
+    {
+        // nSetupDetector() adjusts the resolution limits for a single
+        // wavelength; with a range of wavelengths keep the user's limits.
+
+        dResoMin = m_fResolutionMin;
+        dResoMax = m_fResolutionMax;
+        nStat = nSetupDetector(nDet);
+        m_fResolutionMin = dResoMin;
+        m_fResolutionMax = dResoMax;
+        if (0 != nStat)
+            return (nStat);
+
+        poSpatial = m_ppoDetector[nDet]->m_poSpatial;
+
+        // d* limits in 1/Angstrom.  Without a high resolution limit use the
+        // largest d* any wavelength in range can reach (2 / lambda_min).
+
+        if ( (0.0 < dResoMax) && (dResoMax < 99999.0) )
+            dDstarSqMax = 1.0 / (dResoMax * dResoMax);
+        else
+            dDstarSqMax = 4.0 / (m_oTOFLaue.dGetLambdaMin() * m_oTOFLaue.dGetLambdaMin());
+        if ( (0.0 < dResoMin) && (dResoMin < 99999.0) )
+            dDstarSqMin = 1.0 / (dResoMin * dResoMin);
+        else
+            dDstarSqMin = 0.0;
+
+        int a3nMin[3];
+        for (int i = 0; i < 3; i++)
+        {
+            a3nMax[i] = (int) (m_ppoCrystal[m_nWhichCrystal]->fGetCell(i)
+                               * sqrt(dDstarSqMax)) + 1;
+            a3nMin[i] = -a3nMax[i];
+            if (m_bHKLLimits)
+            {
+                a3nMin[i] = max(a3nMin[i], min(m_a6nHKLLimits[2*i], m_a6nHKLLimits[2*i+1]));
+                a3nMax[i] = min(a3nMax[i], max(m_a6nHKLLimits[2*i], m_a6nHKLLimits[2*i+1]));
+            }
+        }
+
+        for (nH = a3nMin[0]; nH <= a3nMax[0]; nH++)
+        {
+            for (nK = a3nMin[1]; nK <= a3nMax[1]; nK++)
+            {
+                for (nL = a3nMin[2]; nL <= a3nMax[2]; nL++)
+                {
+                    a3fHKL[0] = (double) nH;
+                    a3fHKL[1] = (double) nK;
+                    a3fHKL[2] = (double) nL;
+                    vMulMat3DVec3D(m_afGonCrysMatrix, a3fHKL, a3fX);
+
+                    dDstarSq = fDot3D(a3fX, a3fX);
+                    if ( (dDstarSq <= dDstarSqMin) || (dDstarSq > dDstarSqMax) )
+                        continue;
+
+                    dXdotS0 = fDot3D(a3fX, m_afS0);
+                    if (0.0 >= dXdotS0)
+                        continue;
+                    dLambda = 2.0 * dXdotS0 / dDstarSq;
+                    if (!m_oTOFLaue.bLambdaInRange(dLambda))
+                        continue;
+
+                    if (m_ppoCrystal[m_nWhichCrystal]->m_poSpacegroup->bIsExtinct(nH, nK, nL))
+                        continue;
+
+                    // Project onto the detector (parallax depends on lambda)
+
+                    vMulVec3DScalar(a3fX, dLambda, m_afXR);
+                    m_fReflnDstarSq = dDstarSq;
+                    poSpatial->vSetParallaxWavelength((float) dLambda);
+                    if (0 != nCalcDetCoords())
+                        continue;
+                    if (   m_bRect
+                        && (   (m_fPx0 < m_a4nRect[0]) || (m_fPx0 > m_a4nRect[2])
+                            || (m_fPx1 < m_a4nRect[1]) || (m_fPx1 > m_a4nRect[3]) ) )
+                        continue;
+
+                    // Flight path from the crystal to the detector cylinder
+
+                    dL2 = m_ppoDetector[nDet]->dCalcTOFLaueL2(m_afXRminusS0);
+                    if (0.0 >= dL2)
+                        continue;
+
+                    dChan  = m_oTOFLaue.dLambdaToChan(dLambda, dL2);
+                    dWidth = m_oTOFLaue.dWidthChan(dLambda,
+                                                   0.5 * dLambda * sqrt(dDstarSq));
+                    if (   (dChan + 0.5 * dWidth < dChanLo)
+                        || (dChan - 0.5 * dWidth > dChanHi)
+                        || (0.0 > dChan)
+                        || ((double) m_oTOFLaue.nGetNumChannels() < dChan) )
+                        continue;
+
+                    // Non-uniformity check as in nPredictInsertRefln()
+
+                    oRefln.vSetField(m_poReflnlist->m_nFI_nNonunfFlag, (int) 0);
+                    bNonunfReject = m_ppoDetector[nDet]->m_poNonunf->bPixelIsBad((int) m_fPx0, (int) m_fPx1);
+                    if (bNonunfReject)
+                    {
+                        if (0 == m_nNonunfFlag)
+                        {
+                            oRefln.vSetField(m_poReflnlist->m_nFI_nNonunfFlag, (int) 1);
+                            bNonunfReject = FALSE;
+                        }
+                    }
+                    if (bNonunfReject)
+                        continue;
+
+                    a3nHKL[0] = nH;
+                    a3nHKL[1] = nK;
+                    a3nHKL[2] = nL;
+                    oRefln.vSetH(a3nHKL[0]);
+                    oRefln.vSetK(a3nHKL[1]);
+                    oRefln.vSetL(a3nHKL[2]);
+
+                    // Lorentz factor as in the original PCS d*TREK (1/sin^2 theta);
+                    // no polarization for neutrons.
+
+                    dSinTheta  = 0.5 * dLambda * sqrt(dDstarSq);
+                    m_fLorentz = CTOFLaue::dLorentzLegacy(dSinTheta);
+                    oRefln.vSetField(m_poReflnlist->m_nFI_fLorentz, (float) m_fLorentz);
+                    oRefln.vSetField(m_poReflnlist->m_nFI_fPolarz, (float) 1.0);
+
+                    fObliqueIncidenceCorrection = m_fLenDN / fDot3D(m_afDN, m_afXRminusS0);
+                    oRefln.vSetField(m_poReflnlist->m_nFI_fOblique, (float) fObliqueIncidenceCorrection);
+
+                    m_fReflnResolution = 1.0 / sqrt(dDstarSq);
+                    oRefln.vSetField(m_poReflnlist->m_nFI_fResolution, (float) m_fReflnResolution);
+
+                    oRefln.vSetField(m_poReflnlist->m_nFI_fCalcRotMid,   (float) dChan);
+                    oRefln.vSetField(m_poReflnlist->m_nFI_fCalcRotStart, (float) (dChan - 0.5 * dWidth));
+                    oRefln.vSetField(m_poReflnlist->m_nFI_fCalcRotEnd,   (float) (dChan + 0.5 * dWidth));
+                    oRefln.vSetField(m_poReflnlist->m_nFI_fCalcRotWidth, (float) dWidth);
+
+                    oRefln.vSetField(m_poReflnlist->m_nFI_fCalcPx0, (float) m_fPx0);
+                    oRefln.vSetField(m_poReflnlist->m_nFI_fCalcPx1, (float) m_fPx1);
+                    oRefln.vSetField(m_poReflnlist->m_nFI_fCalcXmm, (float) m_fXmm);
+                    oRefln.vSetField(m_poReflnlist->m_nFI_fCalcYmm, (float) m_fYmm);
+                    if (m_poReflnlist->m_nFI_fCalcZmm >= 0)
+                        oRefln.vSetField(m_poReflnlist->m_nFI_fCalcZmm, (float) m_fZRelativeCoordinate);
+
+                    oRefln.vSetField(m_poReflnlist->m_nFI_fRecipCoord0, (float) m_afXR[0]);
+                    oRefln.vSetField(m_poReflnlist->m_nFI_fRecipCoord1, (float) m_afXR[1]);
+                    oRefln.vSetField(m_poReflnlist->m_nFI_fRecipCoord2, (float) m_afXR[2]);
+
+                    if (0 <= nFI_Wave)
+                        oRefln.vSetField(nFI_Wave, (float) dLambda);
+                    if (m_poReflnlist->m_nFI_nTwinID != -1)
+                        oRefln.vSetField(m_poReflnlist->m_nFI_nTwinID,
+                                         m_nWhichCrystal + 1 + m_nWhichCrystalTwinLaw * 1000);
+                    if (0 <= m_poReflnlist->m_nFI_nDetNum)
+                        oRefln.vSetField(m_poReflnlist->m_nFI_nDetNum, nDet);
+
+                    m_poReflnlist->nInsert(&oRefln);
+                }
+            }
+        }
+        poSpatial->vSetParallaxWavelength(0.0f);
+    }
+    return (0);
+}
+
 int Cpredict::nSortAxes(void)
 {
   double fVec1[3], fVec2[3];
@@ -2687,8 +2942,11 @@ int Cpredict::nExpandReflnlist(Creflnlist *poReflnlistIn)
 
   if ((m_bCalcMosaicityLinearCoeffs) || (m_bCalcMinMosaicityForRefln))
       (void) poReflnlistL->nExpandGetField(poReflnlistL->ms_sfCalcMosCoeffA);
-  if (m_bCalcMosaicityLinearCoeffs) 
+  if (m_bCalcMosaicityLinearCoeffs)
       (void) poReflnlistL->nExpandGetField(poReflnlistL->ms_sfCalcMosCoeffB);
+
+  if (m_bTOFLaue)
+      m_nFI_fCalcWavelength = poReflnlistL->nExpandGetField(Creflnlist::ms_sfCalcWavelength);
 
   return (0);
 

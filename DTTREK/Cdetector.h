@@ -53,6 +53,7 @@
 #include "Cspatial.h"
 #include "Cnonunf.h"
 #include "Cimage_header.h"
+#include "CTOFLaue.h"
 #include "dtrekvec.h"
 
 //+Definitions and constants
@@ -189,6 +190,16 @@ int nCalcDetCoords(const float fXR[3],
 		   const float fS0[3],
 		   float *pfXmm, float *pfYmm,
 		   float *pfPx0, float *pfPx1);
+
+// TOF-Laue: observed wavelength of a spot at pixel (fPx0, fPx1) and TOF
+// channel dChan, its parallax-corrected mm coordinates and its unit
+// scattered beam vector S.  L2 is the flight path to the detector cylinder.
+int nCalcTOFLaueObs(const CTOFLaue& roTOFLaue,
+                    const float fPx0, const float fPx1, const double dChan,
+                    double *pdLambda, float a3fMM[3], double a3fS[3],
+                    double *pdL2 = NULL);
+// TOF-Laue: flight path L2 (mm) for a unit scattered beam vector S
+double dCalcTOFLaueL2(const double a3fS[3]);
 
 Cstring sGetParamName(int nParam) {  return m_poGoniometer->sGetName(nParam); };
 

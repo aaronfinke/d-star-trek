@@ -62,6 +62,7 @@
 #include "Csource.h"            // Needed for nAddDetResol
 #include "Crotation.h"
 #include "Cgoniometer.h"
+#include "CTOFLaue.h"
 
 #include "ResoBins.h"
 #include "dtsvd.h"
@@ -129,6 +130,8 @@ Cstring Creflnlist::ms_sfCalcMosCoeffA  = "fCalc_mos_CoeffA";
 Cstring Creflnlist::ms_sfCalcMosCoeffB  = "fCalc_mos_CoeffB";
 Cstring Creflnlist::ms_sfPartiality     = "fCalc_partiality";
 Cstring Creflnlist::ms_sfResolution     = "fResolution";
+Cstring Creflnlist::ms_sfDetWavelength  = "fDetwavelength";
+Cstring Creflnlist::ms_sfCalcWavelength = "fCalwavelength";
 Cstring Creflnlist::ms_sfDetResolution  = "fDetResolution";
 Cstring Creflnlist::ms_sfRecipCoord0    = "fRecip0";
 Cstring Creflnlist::ms_sfRecipCoord1    = "fRecip1";
@@ -6766,6 +6769,20 @@ int Creflnlist::nCalcRecipLatticePoints(Cimage_header& oHeader,double& fUserInpu
   bool  bEllipsoidIntersects;
   bool  bEllipsoidInfoAvailable;
 
+  // TOF-Laue (LANSCE PCS): the third coordinate is a TOF channel and each
+  // spot has its own wavelength; the reciprocal lattice vectors are absolute.
+
+  bool     bTOFLaue    = CTOFLaue::bIsTOFLaue(oHeader);
+  CTOFLaue oTOFLaue;
+  double   dObsChan    = 0.0;
+  double   dObsLambda  = 1.0;
+  int      nFI_DetWave = -1;
+  if (bTOFLaue) {
+      if (0 != oTOFLaue.nInitValues(oHeader))
+          return (1);
+      nFI_DetWave = nExpandGetField(ms_sfDetWavelength);
+  }
+
   Crefln *poRefln;                 // Convenience pointer
 
   if (fUserInput<=-1.0) {
@@ -6945,7 +6962,12 @@ int Creflnlist::nCalcRecipLatticePoints(Cimage_header& oHeader,double& fUserInpu
           
           m_poCrysGonio->vCalcGetRotMatrix(&fGonMatrix[0][0],m_poCrysGonio->nGetNum(m_poRotation->sGetName()));
           fDet = fInvMat3D(&fGonMatrix[0][0],&fInvGonMatrix[0][0]);
-          if (m_poCrysGonio->nGetRotVector(m_poRotation->sGetName(),&a3fFloatBuf[0])) {
+          if (bTOFLaue) {
+              // Stationary crystal: no rotation axis is needed
+              a3fFloatBuf[0] = 1.0;
+              a3fFloatBuf[1] = 0.0;
+              a3fFloatBuf[2] = 0.0;
+          } else if (m_poCrysGonio->nGetRotVector(m_poRotation->sGetName(),&a3fFloatBuf[0])) {
               cout << "ERROR, check that ROTATION_AXIS_NAME value matches a CRYSTAL_GONIO_NAMES value!\n";
               nStat =1;
               continue;
@@ -7044,6 +7066,11 @@ int Creflnlist::nCalcRecipLatticePoints(Cimage_header& oHeader,double& fUserInpu
               fObsPx0 = poRefln->fGetField(nFI0);
               fObsPx1 = poRefln->fGetField(nFI1);
               fObsRot = poRefln->fGetField(nFI2);
+              if (bTOFLaue) {
+                  // The "rotation" is a TOF channel; the crystal does not rotate
+                  dObsChan = fObsRot;
+                  fObsRot  = 0.0;
+              }
               
               // Calculate observed millimeter coordinates
               
@@ -7077,7 +7104,21 @@ int Creflnlist::nCalcRecipLatticePoints(Cimage_header& oHeader,double& fUserInpu
                   fVDCO[2] = f3MM;
                   vMulMat3DVec3D(fDD, fVDCO, fTS);
                   (void) fNormVec3D(fTS);
+                  if (bTOFLaue) {
+                      // Wavelength of this spot from its TOF channel and the flight
+                      // path to the detector cylinder, with the parallax-corrected
+                      // scattered beam direction.
+                      float a3fMM[3];
+                      if (0 != m_ppoDetector[nDetNum]->nCalcTOFLaueObs(oTOFLaue,
+                                     (float) fObsPx0, (float) fObsPx1, dObsChan,
+                                     &dObsLambda, a3fMM, fTS))
+                          dObsLambda = 1.0;
+                      if (0 <= nFI_DetWave)
+                          poRefln->vSetField(nFI_DetWave, (float) dObsLambda);
+                  }
                   vAddVec3DVec3D(a3fS0, fTS, fXR);
+                  if (bTOFLaue)
+                      vMulVec3DScalar(fXR, 1.0 / dObsLambda, fXR);   // Absolute 1/Angstrom
 
 
                   // Compute a "Lorentz factor" and reject this reflection if a problem                  
@@ -7095,7 +7136,15 @@ int Creflnlist::nCalcRecipLatticePoints(Cimage_header& oHeader,double& fUserInpu
                   vMulMat3DVec3D(fInvGonMatrix, fTS, fX); // fTS is a temp var here
 
                   vMulMat3DVec3D(fInvRot, fXRD, fTS);      // fTS is a temp var here
-                  vMulMat3DVec3D(fInvGonMatrix, fTS, fXD); // fTS is a temp var here                  
+                  vMulMat3DVec3D(fInvGonMatrix, fTS, fXD); // fTS is a temp var here
+                  if (bTOFLaue) {
+                      // No rotation.  The least certain direction of X is now
+                      // along X itself (an error in lambda scales X), so use
+                      // the unit vector along X where the rotation derivative
+                      // would be.  Indexing then down-weights that direction.
+                      vCopyVec3D(fX, fXD);
+                      (void) fNormVec3D(fXD);
+                  }
 
                   // Resolution is wavelength / |XR|
                   
@@ -7165,9 +7214,9 @@ int Creflnlist::nCalcRecipLatticePoints(Cimage_header& oHeader,double& fUserInpu
                               fRotErr = 0.0;
                               fMMErr = 0.0;
 
-                              if ((m_nFI_fObsRotMid>=0) && 
-                                  (m_nFI_fObsRotWidth>=0) && 
-                                  (nFI3>=0)) {
+                              if ((m_nFI_fObsRotMid>=0) &&
+                                  (m_nFI_fObsRotWidth>=0) &&
+                                  (nFI3>=0) && !bTOFLaue) {
                                   
                                   double a3fVTS[3];
                                   double a3fVDCC[3];

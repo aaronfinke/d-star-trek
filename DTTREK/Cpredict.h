@@ -56,6 +56,7 @@
 #include "Crotation.h"
 #include "Creflnlist.h"
 #include "Cnonunf.h"
+#include "CTOFLaue.h"
 #include "dtrekvec.h"
 
 //+Definitions and constants
@@ -189,6 +190,18 @@ private:
   double      m_fWholeRotStart;         // What is the start of the entire rotation wedge?
   double      m_fWholeRotEnd;           // What is the end of the entire rotation wedge?
 
+  // Time-of-flight wavelength-resolved Laue mode (LANSCE PCS).  The crystal
+  // is stationary, the "rotation" range passed to nPredict() is a range of
+  // TOF channels and each reflection gets its own wavelength.
+
+  bool        m_bTOFLaue;
+  CTOFLaue    m_oTOFLaue;
+  int         m_nFI_fCalcWavelength;    // Index of the fCalwavelength field
+  bool        m_bHKLLimits;             // Restrict h, k, l (TOF-Laue prediction)
+  int         m_a6nHKLLimits[6];        // h1 h2 k1 k2 l1 l2 (either order)
+  bool        m_bRect;                  // Restrict the detector area (TOF-Laue prediction)
+  int         m_a4nRect[4];             // px0min px1min px0max px1max
+
 #define     DTREK_PREDICT_VERBOSE_MOSAICITY     0x0001
   DTREK_WORD m_wVerbose;
 
@@ -260,6 +273,16 @@ inline void vSetCrysMosaicity(const double* pfMosaicity)
 };
 
 inline bool bIsAvailable() { return (m_nStat == 0); };
+
+// TOF-Laue mode
+void vSetTOFLaue(const CTOFLaue& roTOFLaue);
+inline void vSetHKLLimits(const int a6nLimits[6])
+  { for (int i = 0; i < 6; i++) m_a6nHKLLimits[i] = a6nLimits[i]; m_bHKLLimits = TRUE; }
+inline void vSetRect(const int a4nRect[4])
+  { for (int i = 0; i < 4; i++) m_a4nRect[i] = a4nRect[i]; m_bRect = TRUE; }
+inline bool      bIsTOFLaue(void)     { return (m_bTOFLaue); }
+inline CTOFLaue* poGetTOFLaue(void)   { return (&m_oTOFLaue); }
+int  nPredictTOFLaue(const double fChanStart, const double fChanEnd);
 int	  nCalcNearestCentroids(Creflnlist& oList,int nReflnStart,int nReflnEnd,double fObsRotStart,double fObsRotEnd,int nMinSearchRadius,float* pfCentroid0,float* pfCentroid1);
 
  private: // Some of the above function will be made private

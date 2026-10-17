@@ -118,6 +118,8 @@
 #include "dtrekdefs.h"
 #include "dtreksys.h"
 #include "winbmp.h"
+#include "nexuspcs.h"
+#include "CTOFLaue.h"
 
 #ifdef DTREK_CBF
 #include "cbfdtrek.h"
@@ -1365,6 +1367,7 @@ Cimage_header::nRead(int* pnFile, const Cstring& rsFilename,
   Cstring sText;
   Cstring sNameForTemplate;
   bool bIsDtrek;
+  bool bIsPCSNexus = false;
 #ifdef BAS2000
   Cstring sNameForBAS2000Inf = "";//BAS2000
 #endif
@@ -1450,6 +1453,13 @@ Cimage_header::nRead(int* pnFile, const Cstring& rsFilename,
               nStat = 0;
           };
 
+      }
+      else if (CPCSVolume::bIsHDFSignature(pcBuffer))
+      {
+          // LANSCE PCS time-of-flight NeXus file (converted to HDF5)
+
+          bIsPCSNexus = true;
+          nStat = nReadPCSNexusHeader(m_sFilename, sNameForTemplate, this);
       }
 #ifdef RAXIS
       else if (   (0 == sText.index("R-AXIS"))
@@ -1630,7 +1640,10 @@ Cimage_header::nRead(int* pnFile, const Cstring& rsFilename,
       (void) nGetValue(ms_sSize2, &nDim1);
     }
   
-  if ( (0 < nDim0) && (0 < nDim1) )
+  // A PCS NeXus file holds all TOF channels of a scan, so its scan template
+  // is the filename itself and must not be turned into a ??? template.
+
+  if ( (0 < nDim0) && (0 < nDim1) && !bIsPCSNexus )
     {
       // This is an image, set scan_template based on the image filename,
       // NOT what the scan_template is in the header!
@@ -1675,6 +1688,13 @@ Cimage_header::nRead(int* pnFile, const Cstring& rsFilename,
 	nUnbinHeader();
     }
   //-JWP 24-Mar-2014
+
+  // Headers from the original PCS TOF-Laue version of d*TREK lack some
+  // keywords the stock classes need; add them.
+
+  if (0 == nStat)
+    (void) CTOFLaue::nNormalizeHeader(*this);
+
   return (nStat);
 }
 
@@ -2284,6 +2304,7 @@ static const IMAGE_FORMAT_TYPE s_c_stImageFormatTypes[]=
     enImage_format_CBFDTREK,        "CBF_DTREK",
     enImage_format_BAS2000,         "BAS2000",
     enImage_format_HIPIC,           "HiPic",
+    enImage_format_PCS_NEXUS,       "PCS_NeXus",
 
     enImage_format_unknown,         NULL                // by design NULL must be the last string value in this array           
 };

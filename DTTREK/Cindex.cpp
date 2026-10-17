@@ -3906,15 +3906,21 @@ Cindex::nCalcReflnResolution(Creflnlist *poReflnlist)
   if (0 > poReflnlist->m_nFI_fDetResolution)
     poReflnlist->nExpandGetField(Creflnlist::ms_sfDetResolution);
 
+  // TOF-Laue spots each have their own wavelength
+
+  int nFI_Wave = poReflnlist->nGetFieldIndex(Creflnlist::ms_sfDetWavelength);
+
   nRefs = poReflnlist->nGetNumReflns();
   for (nx = 0; nx < nRefs; nx++)
     {
       poRefln = poReflnlist->poGetRefln(nx);
       fPx0 = (double)poRefln->fGetField(nFI0);
       fPx1 = (double)poRefln->fGetField(nFI1);
-      fDetReso = m_fWavelength 
+      fDetReso = m_fWavelength
         * m_ppoDetector[0]->fCalcGetResolution(fPx0, fPx1, m_a3fS0);
-      
+      if ( (0 <= nFI_Wave) && (0.0f < poRefln->fGetField(nFI_Wave)) )
+        fDetReso = fDetReso / m_fWavelength * poRefln->fGetField(nFI_Wave);
+
       poRefln->vSetField(poReflnlist->m_nFI_fDetResolution, fDetReso);
     }
   return (0);

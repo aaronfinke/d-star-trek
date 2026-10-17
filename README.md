@@ -1,5 +1,7 @@
 # d*TREK
 
+This version also processes neutron time-of-flight Laue data from the LANSCE Protein Crystallography Station (PCS); see [TOF_LAUE.md](TOF_LAUE.md).
+
 d*TREK is a suite of C++ classes and programs that is used to process X-ray diffraction data from area detectors. It supports processing of data from multiple detector types (imaging plates, CCDs and pixel arrays) and from multiple vendors (Rigaku, Mar, Dectris, Bruker and ADSC to name a few).
 
 Development of d\*TREK begin in 1994 with a DOE grant (written by Jim Pflugrath and Ed Westbrook) to support the APS-1 CCD detector at the APS. In the years since, development of d\*TREK has been funded by Rigaku.

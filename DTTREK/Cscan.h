@@ -101,6 +101,8 @@ int          m_nFileStartSeqNum; // The starting sequence number for the
 int          m_nFileStepNum;     // The sequence number step value
 int          m_nFileSeqNum;      // The sequence number for the image to access
 int          m_nNumImages;       // The number of images in the scan
+bool         m_bOneFileScan;     // All images are in one file (PCS TOF NeXus);
+                                 //   the sequence number selects the image
 
 int          m_nNumImagesAlloc;  // Number of images allocated in poTheImages
 int          m_nNumImagesAvail;  // Number of images available in poTheImages

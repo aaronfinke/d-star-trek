@@ -97,6 +97,8 @@ static Cstring ms_sSpatialTypeSimple;
 static Cstring ms_sSpatialTypeComplex;
 static Cstring ms_sSpatialTypeNone;
 static Cstring ms_sSpatialTypeInterp;
+static Cstring ms_sSpatialTypeCylinder;     // "Cylinder_spatial" (LANSCE PCS)
+static Cstring ms_sSpatialParallax;         // "SPATIAL_PARALLAX"
 
 static Cstring ms_sPixelSize;
 static Cstring ms_sPscale;
@@ -165,6 +167,16 @@ float          m_fCylindricalDetectorShift; // this value is equal to (D-Rc), wh
                                             // Rc is the radius of the cylindrical detector.
                                             // In the ideal case D=RC, i.e. m_fCylindricalDetectorShift=0.0  
 
+// LANSCE PCS cylindrical detector.  Pixels are mapped onto a virtual flat
+// detector, so to the rest of d*TREK this is a flat (simple) detector:
+//    phi = arc / R,  Ymm = R tan(phi),  Xmm = x / cos(phi) * (P0 + P1 * lambda)
+// where x is the coordinate along the cylinder axis, R = m_fRadius and
+// (P0 + P1 * lambda) is the wavelength-dependent parallax correction.
+
+bool           m_bPCSCylinder;
+float          m_a2fParallax[2];   // P0, P1
+float          m_fParallaxLambda;  // Wavelength used for the parallax correction
+
 int            m_nBadFlag;
 
 int            m_nNumErrorOut;
@@ -225,6 +237,9 @@ inline eSpatial_geo_types eSpatialType(void)
 { return (m_eThe_Geometry); };
 
 inline void vSetRadius(const float fRadius) { m_fRadius = fRadius; }; // Not normally used.
+inline bool bIsPCSCylinder(void) const { return (m_bPCSCylinder); }
+inline void vSetParallaxWavelength(const float fLambda) { m_fParallaxLambda = fLambda; }
+inline float fGetParallaxWavelength(void) const { return (m_fParallaxLambda); }
 inline void vSetVerbose(const int nVerbose) { m_nVerbose = nVerbose; }
 inline float fGetNominalPixelSize(const int nWhich) 
   { return (m_a2fNominalPxSize[nWhich]); }

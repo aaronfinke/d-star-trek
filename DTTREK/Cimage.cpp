@@ -62,6 +62,7 @@
 
 #include "dskio.h"
 #include "winbmp.h"
+#include "nexuspcs.h"
 #ifdef RAXIS
 #include "raxis.h"
 #endif
@@ -716,6 +717,20 @@ int Cimage::nRead()
 {
   Cstring sName = "";
   return (nRead(sName));
+}
+
+int Cimage::nRead(const Cstring& sTemplate, const int nNumber)
+{
+  // Read image nNumber of a file that holds a whole scan.  This is used for
+  // LANSCE PCS TOF NeXus files where nNumber is the TOF channel; other
+  // formats hold one image per file and ignore nNumber.
+
+  int nStat;
+
+  vSetPCSRequestedChannel(nNumber);
+  nStat = nRead(sTemplate);
+  vSetPCSRequestedChannel(nPCS_CHANNEL_SUM);
+  return (nStat);
 }
 
 int Cimage::nRead(const Cstring& sName)
@@ -1577,6 +1592,39 @@ int Cimage::nRead(const Cstring& sName)
 
     } // end of CBF_compression block
 #endif
+  else if (eImage_PCSNXS_compression == m_eCompression)
+    {
+      // LANSCE PCS TOF NeXus file: one TOF channel (or the sum or maximum
+      // over all channels) of the stitched volume, as a float image.
+
+      m_eData_type    = eImage_realIEEE;
+      prfGetPixel     = &Cimage::fGetfPixel;
+      m_eImgByteOrder = (eCPU_byte_orders)nGetByteOrderCPU();
+      m_fSatVal       = 1.0e30f;
+
+      nBytes = nDataSizeNeeded();
+      if (-1 == nBytes)
+        nBytes = 0;
+      if ( (NULL != m_The_Data.pc) && (m_nBytesAllocated != nBytes) )
+        {
+          delete [] m_The_Data.pc;
+          m_The_Data.pc = NULL;
+        }
+      if ( (NULL == m_The_Data.pc) && (0 < nBytes) )
+        m_The_Data.pc = new char [nBytes];
+      m_nBytesAllocated = nBytes;
+      m_nData_size      = nBytes;
+
+      if (0 < nBytes)
+        nStat = nReadPCSNexusData(sFilename, m_The_Data.pf, &m_oHeader);
+
+      // The data are now an ordinary uncompressed float image
+
+      m_eCompression = eImage_no_compression;
+      (void) m_oHeader.nReplaceValue(Cstring(D_K_Compression), Cstring("None"));
+      if (0 == nStat)
+        m_eThe_State = eImage_available_state;
+    } // end of PCSNXS_compression block
 #ifdef BAS2000
   else if (eImage_BAS2000_compression == m_eCompression)
     {
@@ -3343,6 +3391,10 @@ Cimage::nSetHeader(Cimage_header *poHeader)
       else if ("CBF" == sTemp)
       {
           m_eCompression = eImage_CBF_compression;
+      }
+      else if ("PCSNXS" == sTemp)
+      {
+          m_eCompression = eImage_PCSNXS_compression;
       }
 #ifdef BAS2000
       else if ("BAS2000" == sTemp)

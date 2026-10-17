@@ -491,6 +491,12 @@ int Crefine::nInitValues(void)
   m_fRMSDEG          = 0.0;
   m_fRMSANG          = 0.0;
 
+  m_bTOFLaue         = FALSE;
+  m_fTOFRadialWeight = 0.2f;
+  m_fMinIntensity    = -1.0e30f;
+  m_nFI_fDetWave     = -1;
+  m_nFI_fCalcWave    = -1;
+
   m_bCheckConvergence= TRUE;
   m_bUseWideSlice    = FALSE;
   m_bNotUseWideSlice = FALSE;
@@ -690,6 +696,14 @@ int Crefine::nInitValues(Cimage_header& oHeader)
 
       m_poRotation    = new Crotation(oHeader);
       m_bNewRotation  = TRUE;
+
+      if (CTOFLaue::bIsTOFLaue(oHeader))
+        {
+          if (0 == m_oTOFLaue.nInitValues(oHeader))
+            m_bTOFLaue = TRUE;
+          else
+            nStat = 1;
+        }
 
       // Get the number of detectors
 
@@ -1000,6 +1014,12 @@ Crefine::nCopyReflns(Creflnlist *poReflnlistOther)
     }
 
 
+  if (m_bTOFLaue)
+    {
+      m_nFI_fDetWave  = m_poReflnlist->nExpandGetField(Creflnlist::ms_sfDetWavelength);
+      m_nFI_fCalcWave = m_poReflnlist->nExpandGetField(Creflnlist::ms_sfCalcWavelength);
+    }
+
   nRef  = m_poReflnlist->nGetNumReflns();
   for (i = 0; i < nRef; i++)
   {
@@ -1008,22 +1028,39 @@ Crefine::nCopyReflns(Creflnlist *poReflnlistOther)
       //  reflections outside resolution and I/sigma cutoffs, too.
       //  (or use dtreflnmerge to filter the list beforehand)
       // Get detector number
-      
+
       nDetNum = m_poReflnlist->poGetRefln(i)->nGetField(m_poReflnlist->m_nFI_nDetNum);
-      
+
       // Get observed pixel coordinates
-      
+
       f1PX = m_poReflnlist->poGetRefln(i)->fGetField(m_nFI0);
       f2PX = m_poReflnlist->poGetRefln(i)->fGetField(m_nFI1);
-      
+
       // Calculate observed millmeter coordinates
-      
-      nStat = m_ppoDetector[nDetNum]->m_poSpatial->nPixeltoMM(f1PX, 
+
+      if (m_bTOFLaue)
+      {
+          // TOF-Laue: the mm coordinates include the wavelength-dependent
+          // parallax correction, and each spot gets its observed wavelength.
+          double dLambda;
+          double a3fS[3];
+          float  a3fMM[3];
+          nStat = m_ppoDetector[nDetNum]->nCalcTOFLaueObs(m_oTOFLaue, f1PX, f2PX,
+                                      m_poReflnlist->poGetRefln(i)->fGetField(m_nFI2),
+                                      &dLambda, a3fMM, a3fS);
+          f1MM = a3fMM[0];
+          f2MM = a3fMM[1];
+          f3MM = a3fMM[2];
+          if (0 == nStat)
+              m_poReflnlist->poGetRefln(i)->vSetField(m_nFI_fDetWave, (float) dLambda);
+      }
+      else
+      nStat = m_ppoDetector[nDetNum]->m_poSpatial->nPixeltoMM(f1PX,
                                                               f2PX,
                                                               &f1MM,
                                                               &f2MM,
                                                               &f3MM);
-  
+
       if (0 != nStat)
       {
           cout << "WARNING in Crefine::nCopyReflns, invalid "
@@ -1261,6 +1298,15 @@ int Crefine::nSetup(void)
 //      m_anRefineFlags[ms_nSourceRot2] = 0;
       m_anRefineFlags[ms_nDetTrans2] = 0;
 //      m_anRefineFlags[ms_nDetTrans1] = 0;
+  };
+
+  // TOF-Laue: the header wavelength is a dummy 1 Angstrom and there is no
+  // rotation, so the wavelength and mosaicity cannot be refined.  The
+  // wavelength slot refines the TOF delay instead (+TOFDelay).
+
+  if (m_bTOFLaue) {
+      m_anRefineFlags[ms_nSourceWave]      = m_nUserRefineFlags[ms_nSourceWave];
+      m_anRefineFlags[ms_nCrysMosaicity]   = 0;
   };
 
   // Disable some variables if this is not twinned.
@@ -1637,6 +1683,10 @@ int Crefine::nListResults(void)
 
   printf("%s", sLine.string());
   printf("\nSource\n");
+  if (m_bTOFLaue)
+    printf("      TOF delay (us), Rot1, Rot2:  %11.3f %7.3f  %9.3f\n",
+           m_oTOFLaue.dGetDelay(), m_a2fSourceRot[0], m_a2fSourceRot[1]);
+  else
   printf("          Wavelength, Rot1, Rot2:  %11.6f %7.3f  %9.3f\n",
          m_fSourceWave, m_a2fSourceRot[0], m_a2fSourceRot[1]);
   //  printf("                Sigmas:  %9.4f  %9.4f  %9.4f\n",
@@ -1688,28 +1738,44 @@ int Crefine::nListResults(void)
   else
     printf("  NOT GOOD, more than 3 pixels (%.3f mm).", 3.0 * fPxSize);
 
-  printf("\nrmsResid (Deg) = %9.4f", m_fRMSDEG);
-  if (m_a3fCrysMosaicity[0] < (0.667 * m_poRotation->fGetIncrement()) )
+  if (m_bTOFLaue)
     {
+      // TOF-Laue: m_fRMSDEG holds the r.m.s. error in TOF channels
+      printf("\nrmsResid (TOF channels) = %9.4f", m_fRMSDEG);
       if (m_fRMSDEG <= 0.0)
         printf("  WARNING: TOO GOOD! Perhaps there are no reflections!\n");
-      else if (m_fRMSDEG <= (0.333 * m_poRotation->fGetIncrement()))
-        printf("  EXCELLENT, less than 1/3rd the image rot width.\n");
-      else if (m_fRMSDEG <= (0.667 * m_poRotation->fGetIncrement()))
-        printf("  GOOD, less than 2/3rds the image rot width.\n");
+      else if (m_fRMSDEG <= 0.5)
+        printf("  EXCELLENT, less than 1/2 channel.\n");
+      else if (m_fRMSDEG <= 1.0)
+        printf("  GOOD, less than 1 channel.\n");
       else
-        printf("  NOT GOOD, more than 2/3rds the image rot width.\n");
+        printf("  NOT GOOD, more than 1 channel.\n");
     }
   else
     {
-      if (m_fRMSDEG <= 0.0)
-        printf("  WARNING: TOO GOOD! Perhaps there are no reflections!\n");
-      else if (m_fRMSDEG <= (0.25 * (m_a3fCrysMosaicity[0] ) ))
-        printf("  EXCELLENT, less than 1/4 the mosaicity.\n");
-      else if (m_fRMSDEG <= (0.5 * (m_a3fCrysMosaicity[0]) ))
-        printf("  GOOD, less than 1/2 the mosaicity.\n");
+      printf("\nrmsResid (Deg) = %9.4f", m_fRMSDEG);
+      if (m_a3fCrysMosaicity[0] < (0.667 * m_poRotation->fGetIncrement()) )
+        {
+          if (m_fRMSDEG <= 0.0)
+            printf("  WARNING: TOO GOOD! Perhaps there are no reflections!\n");
+          else if (m_fRMSDEG <= (0.333 * m_poRotation->fGetIncrement()))
+            printf("  EXCELLENT, less than 1/3rd the image rot width.\n");
+          else if (m_fRMSDEG <= (0.667 * m_poRotation->fGetIncrement()))
+            printf("  GOOD, less than 2/3rds the image rot width.\n");
+          else
+            printf("  NOT GOOD, more than 2/3rds the image rot width.\n");
+        }
       else
-        printf("  NOT GOOD, more than 1/2 the mosaicity.\n");
+        {
+          if (m_fRMSDEG <= 0.0)
+            printf("  WARNING: TOO GOOD! Perhaps there are no reflections!\n");
+          else if (m_fRMSDEG <= (0.25 * (m_a3fCrysMosaicity[0] ) ))
+            printf("  EXCELLENT, less than 1/4 the mosaicity.\n");
+          else if (m_fRMSDEG <= (0.5 * (m_a3fCrysMosaicity[0]) ))
+            printf("  GOOD, less than 1/2 the mosaicity.\n");
+          else
+            printf("  NOT GOOD, more than 1/2 the mosaicity.\n");
+        }
     }
 
   printf("%s\n", sLine.string());
@@ -1760,6 +1826,12 @@ int Crefine::nUpdateHeader(Cimage_header *poHeader, int nTwinID,const Cstring &s
     for (nx=0;nx<m_nNumTwins;nx++)
         afBuf[nx] = m_poComp[nx].m_fRMSDEG;
     poHeader->nReplaceValue(Crefine::ms_sDtrefineRmsDeg,m_nNumTwins, afBuf, 3);
+    if (m_bTOFLaue)
+    {
+        // In TOF-Laue mode the "degree" residual is in TOF channels
+        poHeader->nReplaceValue(Cstring("DTREFINE_RMS_CHAN"), m_nNumTwins, afBuf, 3);
+        (void) m_oTOFLaue.nUpdateHeader(poHeader);
+    }
     for (nx=0;nx<m_nNumTwins;nx++) {
         for (ny=0;ny<7;ny++) {
             anBuf[nx*7+ny] = m_poComp[nx].m_a7nReflnNumbers[ny];
@@ -1924,6 +1996,14 @@ Crefine::nSetRefineFlags(const Cstring& sFlags)
     }
   else if (ms_sSourceWave == sTemp)
     {
+      if (m_bTOFLaue)
+        cout << "WARNING: SourceWave cannot be refined for TOF-Laue data (use TOFDelay).\n" << flush;
+      else
+        m_nUserRefineFlags[ms_nSourceWave] = nRefined;
+    }
+  else if (m_bTOFLaue && ("TOFDelay" == sTemp))
+    {
+      // TOF-Laue: the TOF delay uses the (otherwise unused) wavelength slot
       m_nUserRefineFlags[ms_nSourceWave] = nRefined;
     }
   else if (ms_sCrysRot1 == sTemp)
@@ -2498,6 +2578,45 @@ Crefine::nDoRefinement(const Cstring& sRefineOptions,
                 vSetRejectLimits(a3fRejectLimits[0],
                     a3fRejectLimits[1], a3fRejectLimits[2]);
             }
+        }
+        else if ("-wave" == sTemp)
+        {
+            // TOF-Laue: only use spots with wavelengths in this range
+            float a2fWave[2];
+            i++;
+            for (j=0; (j < 2) && (0 == nStat) && (i < argc); j++, i++)
+            {
+                nStat = sscanf(psWords[i].string(), "%f", &a2fWave[j]);
+                if (1 == nStat)
+                    nStat = 0;
+                else
+                    cout << ssErrorInvalid << psWords[i] << " < !";
+            }
+            i--;
+            if (2 != j)
+                cout << ssErrorMissing;
+            else if (m_bTOFLaue)
+                m_oTOFLaue.vSetLambdaRange(a2fWave[0], a2fWave[1]);
+            else
+                cout << "WARNING: -wave ignored, the header does not describe TOF-Laue data.\n";
+        }
+        else if ("-threshold" == sTemp)
+        {
+            // Minimum spot intensity (as in the original PCS TOF-Laue d*TREK)
+            i++;
+            if (i < argc)
+            {
+                nStat = sscanf(psWords[i].string(), "%f", &fTemp);
+                if (1 == nStat)
+                {
+                    m_fMinIntensity = fTemp;
+                    nStat = 0;
+                }
+                else
+                    cout << ssErrorInvalid << psWords[i].string() << " < !";
+            }
+            else
+                cout << ssErrorInvalid;
         }
         else if ("-reflimit" == sTemp) 
         {
@@ -3411,6 +3530,11 @@ int Crefine::nGetReflnsFromFind(Creflnlist& oListFind,const float fResoMin, cons
     int         nObsRef;
 
     if ((!m_poReflnlistIn->nGetNumReflns()) || (!(*m_poReflnlistIn)[0].bEllipsoidAvailable()))
+        return 0;
+
+    // TOF-Laue: indices come straight from the reciprocal lattice vectors in
+    // nRefineLoop; this matching of predictions in rotation ranges does not apply.
+    if (m_bTOFLaue)
         return 0;
 
     poNewList = new Creflnlist(oListFind);
@@ -4976,6 +5100,12 @@ int Crefine::nRefineLoop(const int nLoopIn)
   float  *afObsIntensity;
   float  *afObsIntensitySig;
   float  *afObsSharpness;
+  double *afTOFLambda;                 // TOF-Laue: observed wavelength of each refln
+  double *afTOFLambda0;                // TOF-Laue: ... at the TOF delay of the loop start
+  double *afTOFTime0;                  // TOF-Laue: TOF + delay (us) at the loop start
+  double *afTOFDelayDeriv;             // TOF-Laue: derivative of the residual wrt the delay
+  double dInitTOFDelay = 0.0;          // TOF-Laue: TOF delay at the loop start
+  double dOrigTOFDelay = 0.0;          // TOF-Laue: TOF delay of the last accepted cycle
   int    *anFlopCount;
   int    *anGonioMatNum;
   int    *anTwinID;                                                     // Twin ID (with 1000*TwinLaw).
@@ -5105,6 +5235,10 @@ int Crefine::nRefineLoop(const int nLoopIn)
   afObsIntensity=       new float[nNumReflns];
   afObsIntensitySig =   new float[nNumReflns];
   afObsSharpness    =   new float[nNumReflns];
+  afTOFLambda       =   new double[nNumReflns];
+  afTOFLambda0      =   new double[nNumReflns];
+  afTOFTime0        =   new double[nNumReflns];
+  afTOFDelayDeriv   =   new double[nNumReflns];
   
 
   // Figure out the number of distinct goniometer settings we have in out reflection list.
@@ -5159,7 +5293,12 @@ int Crefine::nRefineLoop(const int nLoopIn)
           m_poCrysGonio->vCalcGetRotMatrix(& a3x3fFloatBuf[0][0],nRotAxis); 
           vCopyMat3D(&a3x3fFloatBuf[0][0],&aa3x3fGonMatrix[ny][0][0]);
           fDet  = fInvMat3D(&aa3x3fGonMatrix[ny][0][0], &aa3x3fGonMatrixInv[ny][0][0]);
-          if (m_poCrysGonio->nGetRotVector(nRotAxis,&a3fFloatBuf[0])) {
+          if (m_bTOFLaue) {
+              // Stationary crystal: no rotation axis is needed
+              a3fFloatBuf[0] = 1.0;
+              a3fFloatBuf[1] = 0.0;
+              a3fFloatBuf[2] = 0.0;
+          } else if (m_poCrysGonio->nGetRotVector(nRotAxis,&a3fFloatBuf[0])) {
               nStat =1;
               break;
           };
@@ -5199,6 +5338,14 @@ int Crefine::nRefineLoop(const int nLoopIn)
           if ((afObsIntensity[nx]>0.0) && (afObsIntensitySig[nx]>0.0))
                   bOneGoodRefln = true;
       afObsSharpness[nx] = (m_poReflnlist->m_nFI_fObsSharpness>=0)?((*m_poReflnlist)[nx].fGetField(m_poReflnlist->m_nFI_fObsSharpness)):0.0;
+      afTOFLambda[nx] = 1.0;
+      if (m_bTOFLaue && (0 <= m_nFI_fDetWave))
+          afTOFLambda[nx] = (*m_poReflnlist)[nx].fGetField(m_nFI_fDetWave);
+      afTOFLambda0[nx]    = afTOFLambda[nx];
+      afTOFDelayDeriv[nx] = 0.0;
+      afTOFTime0[nx]      = 0.0;
+      if (m_bTOFLaue)
+          afTOFTime0[nx] = m_oTOFLaue.dChanToTOF(afObsRotMid[nx]) + m_oTOFLaue.dGetDelay();
       
       if (m_poReflnlist->m_nFI_nCompeteRefNum>=0)
           anCompete[nx] = (*m_poReflnlist)[nx].nGetField(m_poReflnlist->m_nFI_nCompeteRefNum);
@@ -5223,6 +5370,8 @@ int Crefine::nRefineLoop(const int nLoopIn)
   a2fOrigS0Rot[0] = m_poSource->fGetRotation(0);
   a2fOrigS0Rot[1] = m_poSource->fGetRotation(1);
   fOrigSourceWave = m_poSource->fGetWavelength();
+  dInitTOFDelay   = m_oTOFLaue.dGetDelay();
+  dOrigTOFDelay   = dInitTOFDelay;
   /*2*/
   m_ppoCrystals[m_nTwinID-1]->vGetCell(a6fTemp);
   if (m_anRefineFlags[ms_nCrysConstraints])
@@ -5259,6 +5408,8 @@ int Crefine::nRefineLoop(const int nLoopIn)
   /*1*/
   vCopyVecND(2, &a2fOrigS0Rot[0], & m_a2fSourceRotShifts[0]);
   m_fSourceWaveShift     = fOrigSourceWave;
+  if (m_bTOFLaue)
+      m_fSourceWaveShift = (float) dInitTOFDelay;  // TOF-Laue: the delay is refined instead
   /*2*/
   m_ppoCrystals[m_nTwinID-1]->vGetCell(& m_a6fCrysTurds[0]);             // Make sure to save the real space parameters here.
   /*3*/
@@ -5511,6 +5662,241 @@ int Crefine::nRefineLoop(const int nLoopIn)
               vAddVec3DVec3D(&a3fVNTS[0], &a3fS0[0], &a3fXRO[0]);           
               /////////////////////////////////////////////////////////////////////////////////
               
+              if (m_bTOFLaue)
+              {
+                  // TOF-Laue: stationary crystal, each spot has its own wavelength.
+                  //   Xobs  = (S + S0) / lambda_obs
+                  //   Xcalc = G U B h
+                  //   r     = Xobs - Xcalc,  residual |P r| with
+                  //   P     = I - (1 - w) Xc Xc'   (w = m_fTOFRadialWeight)
+                  // The derivative code computes d|P r|/dp = (dr/dp . P^2 r) / |P r|,
+                  // so store P^2 r as the residual vector and |P r| as its length.
+
+                  // lambda_obs scales with TOF + delay, so follows a refined delay
+                  double dTOFTime   = afTOFTime0[nRef] + m_oTOFLaue.dGetDelay() - dInitTOFDelay;
+                  double dLambdaObs = (0.0 < afTOFTime0[nRef])
+                                      ? afTOFLambda0[nRef] * dTOFTime / afTOFTime0[nRef]
+                                      : afTOFLambda0[nRef];
+                  afTOFLambda[nRef] = dLambdaObs;
+                  double dLambdaCalc, dRadial, dW, dL2, dChanCalc, dChanErr;
+                  double a3fXc[3], a3fSc[3], a3fZero[3] = {0.0, 0.0, 0.0};
+                  float  fPx0 = 0.0f, fPx1 = 0.0f;
+
+                  if (0.0 >= dLambdaObs)
+                  {
+                      pnRejectFlag[nRef] = 2;
+                      nNumIgnored++;
+                      continue;
+                  }
+                  vMulVec3DScalar(a3fXRO, 1.0 / dLambdaObs, a3fXRO);
+
+                  vCopyMat3D(&aa3x3fGonMatrix[anGonioMatNum[nRef]][0][0], &a3x3fPhiGon[0][0]);
+                  vCopyMat3D(&a3x3fPhiGon[0][0], &a3x3fPhiGonInv[0][0]);
+                  vTranMat3D(a3x3fPhiGonInv);
+                  vMulMat3DVec3D(a3x3fPhiGonInv, a3fXRO, a3fXROR);
+                  vMulMat3DVec3D(aa3x3fCrysOrientInv[nTwinLaw], a3fXROR, a3fHKL);
+                  vMulMat3DMat3D(aa3x3fCrysOrientInv[nTwinLaw], a3x3fPhiGonInv, a3x3fCrysPhiGonInv);
+
+                  double a3fHKLResid[3];
+                  for (nx = 0; nx < 3; nx++)
+                  {
+                      a3nHKL[nx]      = (int) floor(a3fHKL[nx] + 0.5);
+                      a3fHKLResid[nx] = a3fHKL[nx] - a3nHKL[nx];
+                  }
+
+                  a3nPrevHKL[0] = poRefln->nGetH();
+                  a3nPrevHKL[1] = poRefln->nGetK();
+                  a3nPrevHKL[2] = poRefln->nGetL();
+                  poRefln->vSetH(a3nHKL[0]);
+                  poRefln->vSetK(a3nHKL[1]);
+                  poRefln->vSetL(a3nHKL[2]);
+                  a3fHKL[0] = (double) a3nHKL[0];
+                  a3fHKL[1] = (double) a3nHKL[1];
+                  a3fHKL[2] = (double) a3nHKL[2];
+
+                  // Weights (rotation-based weights do not apply)
+                  pfSigs[nRef] = 1.0;
+                  if ( (eWeightIntensity == m_eWeightType) && (0.0 < fabs(afObsIntensity[nRef])) )
+                      pfSigs[nRef] = 1.0 / fabs(afObsIntensity[nRef]);
+                  else if ( (eWeightIoverSig == m_eWeightType) && (0.0 < afObsIntensitySig[nRef]) )
+                      pfSigs[nRef] = 1.0 / max(0.1, fabs(afObsIntensity[nRef] / afObsIntensitySig[nRef]));
+
+                  // REJECTION TESTS: I/sigma, sharpness, intensity, wavelength, [0,0,0]
+                  if (   (0.0 >= afObsIntensitySig[nRef])
+                      || (m_fSigma > (afObsIntensity[nRef] / afObsIntensitySig[nRef]))
+                      || (m_fSharpness < afObsSharpness[nRef])
+                      || (m_fMinIntensity > afObsIntensity[nRef])
+                      || !m_oTOFLaue.bLambdaInRange(dLambdaObs) )
+                  {
+                      pnRejectFlag[nRef] = 2;
+                      nNumIgnored++;
+                      continue;
+                  }
+                  if ((0 == a3nHKL[0]) && (0 == a3nHKL[1]) && (0 == a3nHKL[2]))
+                  {
+                      pnRejectFlag[nRef] = 1;
+                      nNumRejects++;
+                      continue;
+                  }
+
+                  vMulMat3DVec3D(aa3x3fCrysOrient[nTwinLaw], a3fHKL, a3fTempVec1);
+                  vMulMat3DVec3D(a3x3fPhiGon, a3fTempVec1, a3fXRC);
+                  vSubVec3DVec3D(a3fXRO, a3fXRC, a3fXROXRC);
+
+                  // REJECTION TEST:  Out of resolution bounds.
+                  f0 = fLenVec3D(a3fXRC);
+                  if ((f0 < fMinResStar) || (f0 > fMaxResStar) )
+                  {
+                      pnRejectFlag[nRef] = 2;
+                      nNumIgnored++;
+                      continue;
+                  }
+                  m_a2fResoUsed[0] = max(m_a2fResoUsed[0],fOrigSourceWave/f0);
+                  m_a2fResoUsed[1] = min(m_a2fResoUsed[1],fOrigSourceWave/f0);
+
+                  // REJECTION TEST:  Too far from an integer HKL.
+                  vMulMat3DVec3D(a3x3fCrysPhiGonInv, a3fXROXRC, a3fTempVec1);
+                  for (nx = 0; nx < 3; nx++)
+                      if (fabs(a3fTempVec1[nx]) > 0.3)
+                          break;
+                  if (nx != 3)
+                  {
+                      pnRejectFlag[nRef] = 1;
+                      nNumRejects++;
+                      nNumDegRejects++;
+                      continue;
+                  }
+
+                  // Residual with the radial (wavelength) component down-weighted
+                  vCopyVec3D(a3fXRC, a3fXc);
+                  (void) fNormVec3D(a3fXc);
+                  dRadial = fDot3D(a3fXROXRC, a3fXc);
+                  dW      = m_fTOFRadialWeight;
+                  vMulVec3DScalar(a3fXc, (1.0 - dW) * dRadial, a3fTempVec1);
+                  vSubVec3DVec3D(a3fXROXRC, a3fTempVec1, a3fTempVec1);         // P r
+                  vMulVec3DScalar(a3fXc, (1.0 - dW * dW) * dRadial, a3fTempVec2);
+                  vSubVec3DVec3D(a3fXROXRC, a3fTempVec2, a3fTempVec2);         // P^2 r
+                  vCopyVec3D(a3fTempVec2, aa3fResidVec + 3*nRef);
+                  afResidVecLen[nRef] = pfVal[nRef] = fLenVec3D(a3fTempVec1);
+
+                  // d Xobs / d delay = -Xobs / (TOF + delay)
+                  afTOFDelayDeriv[nRef] = 0.0;
+                  if ( (0.0 < dTOFTime) && (0.0 < afResidVecLen[nRef]) )
+                      afTOFDelayDeriv[nRef] = - fDot3D(a3fXRO, a3fTempVec2)
+                                              / (dTOFTime * afResidVecLen[nRef]);
+                  vCopyMat3D(&a3x3fPhiGon[0][0], aa3x3fPhiRotMat + 9*nRef);
+                  vZeroMat(3, 1, aa3fXProjVec + nRef*3);
+
+                  // Calculated wavelength, pixel and TOF channel
+                  dLambdaCalc = 2.0 * fDot3D(a3fXRC, a3fS0) / max(1.0e-10, fDot3D(a3fXRC, a3fXRC));
+                  if (0.0 >= dLambdaCalc)
+                  {
+                      pnRejectFlag[nRef] = 2;
+                      nNumIgnored++;
+                      continue;
+                  }
+                  vMulVec3DScalar(a3fXRC, dLambdaCalc, a3fXRCR);
+                  vSubVec3DVec3D(a3fXRCR, a3fS0, a3fSc);
+                  m_ppoDetector[0]->m_poSpatial->vSetParallaxWavelength((float) dLambdaCalc);
+                  nStat = m_ppoDetector[0]->nScaleSOnPlateItr(a3fSc, a3fVTS, a3fZero);
+                  if (0 == nStat)
+                  {
+                      vMulMat3DVec3D(a3x3fDDInv, a3fVTS, a3fVDCC);
+                      nStat = m_ppoDetector[0]->m_poSpatial->nMMtoPixel(a3fVDCC[0], a3fVDCC[1],
+                                                                        a3fVDCC[2], &fPx0, &fPx1);
+                  }
+                  m_ppoDetector[0]->m_poSpatial->vSetParallaxWavelength(0.0f);
+                  if (0 != nStat)
+                  {
+                      nStat = 0;
+                      pnRejectFlag[nRef] = 2;
+                      nNumIgnored++;
+                      continue;
+                  }
+                  (void) fNormVec3D(a3fSc);
+                  dL2       = m_ppoDetector[0]->dCalcTOFLaueL2(a3fSc);
+                  dChanCalc = m_oTOFLaue.dLambdaToChan(dLambdaCalc, dL2);
+                  dChanErr  = dChanCalc - afObsRotMid[nRef];
+                  afCalcRotMid[nRef] = (float) dChanCalc;
+                  poRefln->vSetField(m_poReflnlist->m_nFI_fCalcPx0, fPx0);
+                  poRefln->vSetField(m_poReflnlist->m_nFI_fCalcPx1, fPx1);
+                  if (0 <= m_poReflnlist->m_nFI_fCalcRotMid)
+                      poRefln->vSetField(m_poReflnlist->m_nFI_fCalcRotMid, (float) dChanCalc);
+                  if (0 <= m_nFI_fCalcWave)
+                      poRefln->vSetField(m_nFI_fCalcWave, (float) dLambdaCalc);
+
+                  // Virtual detector (mm) errors; the observed mm include the
+                  // parallax correction for lambda_obs (see nCopyReflns).
+                  a2fVDErr[0] = a3fVDCO[0] - a3fVDCC[0];
+                  a2fVDErr[1] = a3fVDCO[1] - a3fVDCC[1];
+
+                  fMMError  = afResidVecLen[nRef];
+                  fROTError = fabs(dChanErr);
+                  oStatOutlierMM.vAdd((double) fMMError);
+                  oStatOutlierROT.vAdd((double) fROTError);
+                  if (((fDevROTResid!=0.0) && (fROTError > fAverageROTResid + 3.0*fDevROTResid)) ||
+                      ((fDevMMResid!=0.0) && (fMMError > fAverageMMResid + 3.0*fDevMMResid))) {
+                      pnRejectFlag[nRef] = 1;
+                      nNumRejects++;
+                      nNumMMRejects++;
+                      continue;
+                  }
+
+                  // REJECTION TEST:  mm and TOF channel limits (-rej)
+                  if ( (ABS(a2fVDErr[0]) > m_a4fRejectLimits[0]) ||
+                       (ABS(a2fVDErr[1]) > m_a4fRejectLimits[1]) )
+                  {
+                      pnRejectFlag[nRef] = 1;
+                      nNumRejects++;
+                      nNumMMRejects++;
+                      continue;
+                  }
+                  if (ABS(dChanErr) > m_a4fRejectLimits[2])
+                  {
+                      pnRejectFlag[nRef] = 1;
+                      nNumRejects++;
+                      nNumDegRejects++;
+                      continue;
+                  }
+
+                  // Check that the residual is smaller than all other residuals.
+                  if (anCompete[nRef]>-1) {
+                      int nRef2;
+                      anLostCompetition[nRef] = 0;
+                      for (nRef2 = anCompete[nRef]; nRef2 != nRef; nRef2 = anCompete[nRef2]) {
+                          if ((pnRejectFlag[nRef2] == 0) && (afResidVecLen[nRef2] > 0.0) && (afResidVecLen[nRef]>afResidVecLen[nRef2])) {
+                              anLostCompetition[nRef] = 1;
+                              pnRejectFlag[nRef] = 2;
+                              nNumIgnored++;
+                              break;
+                          };
+                      };
+                      if (pnRejectFlag[nRef])
+                          continue;
+                  } else
+                      anLostCompetition[nRef] = 0;
+
+                  for (nx=0;nx<3;nx++) {
+                      m_a3x10fIndexHKLErrorRefs[nx][min(10-1,(int) floor(0.5 + ABS(a3fHKLResid[nx])/0.05))]++;
+                      m_a3x10fIndexHKLErrorIntensity[nx][min(10-1,(int) floor(0.5 + ABS(a3fHKLResid[nx])/0.05))]+=afObsIntensity[nRef];
+                  };
+
+                  m_fRMSDEG += dChanErr * dChanErr;     // TOF channels
+                  m_fRMSMM  += a2fVDErr[0] * a2fVDErr[0]  +  a2fVDErr[1] * a2fVDErr[1];
+                  if (pfVal[nRef]!=0.0)
+                      m_fRMSANG += (pfVal[nRef]*pfVal[nRef]);
+                  fTotalError += pfVal[nRef];
+
+                  if ((a3nPrevHKL[0]!=a3nHKL[0]) || (a3nPrevHKL[1]!=a3nHKL[1]) || (a3nPrevHKL[2]!=a3nHKL[2])) {
+                      bHKLChanged = TRUE;
+                      anFlopCount[nRef]++;
+                  };
+
+                  if (afResidVecLen[nRef]<=0.0)
+                      pnRejectFlag[nRef] = 2;
+                  continue;
+              }
+
               fLorentz = 1.0f / max(fabs(fDot3D(a3fE3CrossS0, a3fXRO)), 1e-10);
 
 
@@ -5994,6 +6380,7 @@ int Crefine::nRefineLoop(const int nLoopIn)
           a2fOrigS0Rot[0] = m_poSource->fGetRotation(0);
           a2fOrigS0Rot[1] = m_poSource->fGetRotation(1);
           fOrigSourceWave = m_poSource->fGetWavelength();
+          dOrigTOFDelay   = m_oTOFLaue.dGetDelay();
           /*2*/
           m_ppoCrystals[m_nTwinID-1]->vGetRecipCell(a6fOrigCell);
           /*3*/
@@ -6029,6 +6416,8 @@ int Crefine::nRefineLoop(const int nLoopIn)
           /*1*/
           m_poSource->vSetRotation(a2fOrigS0Rot[0],a2fOrigS0Rot[1]);
           m_poSource->m_poWavelength->nSetWavelength(fOrigSourceWave);
+          if (m_bTOFLaue)
+              m_oTOFLaue.vSetDelay(dOrigTOFDelay);
           /*2*/
           m_ppoCrystals[m_nTwinID-1]->vSetRecipCell(a6fOrigCell);
           /*3*/
@@ -6113,6 +6502,8 @@ int Crefine::nRefineLoop(const int nLoopIn)
                         vAddVec3DVec3D(a3fTempVec1,a3fTempVec2,a3fVDNP);                  
                         
                         vCopyVec3D(a3fVDNP,a3fDeriv);
+                        if (m_bTOFLaue)   // Xobs = (S + S0) / lambda_obs
+                            vMulVec3DScalar(a3fDeriv, 1.0 / afTOFLambda[nRef], a3fDeriv);
                         ppfDeriv[nVar][nRef] = fDot3D(a3fDeriv,aa3fResidVec + nRef*3)/afResidVecLen[nRef];
                     };
                 };
@@ -6152,6 +6543,8 @@ int Crefine::nRefineLoop(const int nLoopIn)
                                                         vAddVec3DVec3D(a3fTempVec1,a3fTempVec2,a3fVDNP);                  
                                                         
                                                         vCopyVec3D(a3fVDNP,a3fDeriv);
+                                                        if (m_bTOFLaue)   // Xobs = (S + S0) / lambda_obs
+                                                            vMulVec3DScalar(a3fDeriv, 1.0 / afTOFLambda[nRef], a3fDeriv);
                                                         ppfDeriv[nVar][nRef] = fDot3D(a3fDeriv,aa3fResidVec + nRef*3)/afResidVecLen[nRef];
                                                 } else
                                                         ppfDeriv[nVar][nRef] = 0.0;
@@ -6172,6 +6565,8 @@ int Crefine::nRefineLoop(const int nLoopIn)
                 for (nRef = 0; nRef < nNumReflns;nRef++) {
                     if (!pnRejectFlag[nRef])  {
                         vCopyVec3D(a3fS0P,a3fDeriv);
+                        if (m_bTOFLaue)   // Xobs = (S + S0) / lambda_obs
+                            vMulVec3DScalar(a3fDeriv, 1.0 / afTOFLambda[nRef], a3fDeriv);
                         ppfDeriv[nVar][nRef] = fDot3D(a3fDeriv,aa3fResidVec + nRef*3)/afResidVecLen[nRef];
                     };
                 };
@@ -6274,8 +6669,15 @@ int Crefine::nRefineLoop(const int nLoopIn)
             };
         };
         
+        // TOF-Laue: the SOURCE_WAVE slot refines the TOF delay (+TOFDelay).
+        if (m_anRefineFlags[SOURCE_WAVE] && m_bTOFLaue) {
+            for (nRef = 0; nRef < nNumReflns;nRef++) {
+                if (!pnRejectFlag[nRef])
+                    ppfDeriv[SOURCE_WAVE][nRef] = afTOFDelayDeriv[nRef];
+            };
+        }
         // Wavelength refinement.
-        if (m_anRefineFlags[SOURCE_WAVE]) {
+        else if (m_anRefineFlags[SOURCE_WAVE]) {
             nVar = SOURCE_WAVE;
             // The only matrix that is affected by the wavelength is the B matrix,
             // so we simply divide the B matrix by the wavelength to get the derivative w.r.t. wavelength.
@@ -6310,7 +6712,17 @@ int Crefine::nRefineLoop(const int nLoopIn)
         }
         
         // We must have enough reflections here.
-        if (m_a7nReflnNumbers[eReflectionNumberAccept]<nNumParams*1.5) {
+        // (TOF-Laue: count the refined parameters, not all of the possible
+        //  ones, since a TOF-Laue image may have well under 65 strong spots.)
+        int nNumParamsNeeded = nNumParams;
+        if (m_bTOFLaue)
+          {
+            nNumParamsNeeded = 0;
+            for (nx = 0; nx < nNumParams; nx++)
+              if (m_anRefineFlags[nx])
+                nNumParamsNeeded++;
+          }
+        if (m_a7nReflnNumbers[eReflectionNumberAccept]<nNumParamsNeeded*1.5) {
             vZeroMat(1,nNumParams,&afDelta[0]);
             vZeroMat(1,nNumParams,&afSigma[0]);
         } else {
@@ -6372,7 +6784,10 @@ int Crefine::nRefineLoop(const int nLoopIn)
 
     // SOURCE_WAVE
 
-    m_poSource->m_poWavelength->nSetWavelength(fOrigSourceWave + afDelta[SOURCE_WAVE]);
+    if (m_bTOFLaue)
+        m_oTOFLaue.vSetDelay(dOrigTOFDelay + afDelta[SOURCE_WAVE]);
+    else
+        m_poSource->m_poWavelength->nSetWavelength(fOrigSourceWave + afDelta[SOURCE_WAVE]);
 
     // CRYS_ROT1
     // CRYS_ROT2
@@ -6544,6 +6959,18 @@ breakout_place:
   vSubVecNDVecND(2,m_a2fSourceRot, m_a2fSourceRotShifts, m_a2fSourceRotShifts);
   m_fSourceWave = fOrigSourceWave;
   m_fSourceWaveShift = m_fSourceWave - m_fSourceWaveShift;
+  if (m_bTOFLaue)
+    {
+      // TOF-Laue: shift of the TOF delay, and the observed wavelengths
+      // that go with the final delay.
+      m_fSourceWaveShift = (float) (m_oTOFLaue.dGetDelay() - dInitTOFDelay);
+      if (0 <= m_nFI_fDetWave)
+        for (nx = 0; nx < nNumReflns; nx++)
+          if (0.0 < afTOFTime0[nx])
+            (*m_poReflnlist)[nx].vSetField(m_nFI_fDetWave,
+                (float) (afTOFLambda0[nx] * (afTOFTime0[nx] + m_oTOFLaue.dGetDelay() - dInitTOFDelay)
+                         / afTOFTime0[nx]));
+    }
   /*2*/
   m_ppoCrystals[m_nTwinID-1]->vGetCell(m_a6fCrysUnitCell);
   vSubVecNDVecND(6, m_a6fCrysUnitCell, m_a6fCrysTurds, m_a6fCrysTurds);
@@ -6721,6 +7148,10 @@ breakout_place:
     delete[] afObsIntensity;
     delete[] afObsIntensitySig;
     delete[] afObsSharpness;
+    delete[] afTOFLambda;
+    delete[] afTOFLambda0;
+    delete[] afTOFTime0;
+    delete[] afTOFDelayDeriv;
 
   return (0);
 };

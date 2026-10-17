@@ -41,7 +41,8 @@ OPTLEV     =    -O1 -g
 #OPTLEV     =    -g
 #OPTLEV     =    -pg
 ##OPTLEV     =    -O2 -
-HOMEBREW   = /usr/local
+HOMEBREW   ?= /opt/homebrew
+HDF5HOME   ?= /opt/homebrew/opt/hdf5
 
 #############################################################################
 
@@ -58,12 +59,12 @@ HOMEBREW   = /usr/local
 
 #DZ           =  -DDEMO_LICENSE
 DZ           =
-CCDEFS       = $(DZ)
+CCDEFS       = $(DZ) -DRAXIS -DSIEMENS -DMARCCD 
 
 # Choose only ONE of the next definitions
 
 MSCOBJSDZ   = raxis.o bs.o marccd.o dip2030.o adscccd.o medoptics.o brandeisccd.o marip.o pck.o winbmp.o \
-cbfdtrek.o
+cbfdtrek.o nexuspcs.o CTOFLaue.o CLaueNorm.o
 
 MSCOBJS    = $(MSCOBJSDZ)
 
@@ -96,11 +97,11 @@ CCFLAGS	   = -DOSX -DBINARY_NOT_BIN \
 			  	  -I$(HOMEBREW)/include \
 				  -I$(PTYPESHOME)/include \
 				  -I$(CBFHOME)/include \
-				  -I/usr/local/Cellar/hdf5@1.8/1.8.23/include \
+				  -I$(HDF5HOME)/include \
 				  -L../DTDISPLAY -L. -L$(PTYPESHOME)/lib \
 				  -L$(CBFHOME)/lib \
 				  -L$(HOMEBREW)/lib \
-				  -L/usr/local/Cellar/hdf5@1.8/1.8.23/lib \
+				  -L$(HDF5HOME)/lib \
 				  -Wno-deprecated \
 				  -fsanitize=address -fno-omit-frame-pointer \
 				  -std=c++20
@@ -124,13 +125,14 @@ ALL	   =	dtfind dtpixhist dtindex dtrefine dtpredict dtstrategy \
 		dtcompose dtdecompose dtbin dtheadermerge \
 		dtcell dtsmooth dtdistor \
 		dtx2refln dtsbcdark dtsbcdarkmask dtrebatch dtdisplayupdate \
+		dtpcsproject dtref2afout dtlauenorm tCTOFLaue \
 
 # OSF/Motif is NOT needed to compile modules in this directory
 # It helps with distribution if -static is used for linux with these modules
 
 #LIBS	   =	$(MSCOBJS) -ldtrekX$(OSTYPE) -lXt -lX11 -lm
 ###linux SLIBS      =	-static -lXp -lXext  -lSM -lICE -lglib
-LIBS	   = $(ANL_LDFLAGS) -ldtrekX$(OSTYPE) -L/usr/X11R6/lib -lXt -lX11 -lm -ldl -lmx -lptypes -lcbf
+LIBS	   = $(ANL_LDFLAGS) -ldtrekX$(OSTYPE) -L/usr/X11R6/lib -lXt -lX11 -lm -ldl -lmx -lptypes -lcbf -lhdf5
 
 #MSTATIC = -static
 MSTATIC = 

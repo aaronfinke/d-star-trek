@@ -54,6 +54,8 @@
 #include "CBackground.h"
 #include "CScanBitmap.h"
 #include "CIceRingLocator.h"
+#include "CTOFLaue.h"
+#include "nexuspcs.h"
 
 #include "CCommandLine.h"
 
@@ -111,6 +113,10 @@ int CDTMainFind::nExecute(unsigned int argc, char* argv[])
   Cstring      sOutHead      = "";
   Cstring      sFindOptions;
   eFind_methods eMethod, eMethod2;
+  bool          bTOFLaue = false;  // LANSCE PCS TOF-Laue data
+  int           nTOFPad  = 4;      // TOF channels on each side of a spot (-pad)
+  Cstring       sCorFile = "";     // TOF-Laue detector response (V/Nb) file (-cor)
+  Cstring       sCorType = "pixel";// and correction mode (-type)
 
   Cimage      *poImage       = NULL;
   Cfind       *poFind        = NULL;
@@ -222,6 +228,7 @@ int CDTMainFind::nExecute(unsigned int argc, char* argv[])
     {
       poReflnlist = new Creflnlist();
       poFind      = new Cfind(*m_poHeader, poReflnlist);
+      bTOFLaue    = CTOFLaue::bIsTOFLaue(*m_poHeader);
       if (poFind->m_poScan->bIsAvailable())
         {
           // Default method is unknown.
@@ -460,7 +467,7 @@ int CDTMainFind::nExecute(unsigned int argc, char* argv[])
             {
               nStat = sscanf(argv[i], "%d", &nTemp);
               if (1 == nStat)
-                nTemp = nTemp;
+                nTOFPad = nTemp;
               else
                 DTREK_ERROR(6, sInvalidArgument);
             }
@@ -468,7 +475,26 @@ int CDTMainFind::nExecute(unsigned int argc, char* argv[])
             {
               DTREK_ERROR(5, sMissingOption);
             }
-          printf("WARNING: -pad option is now obsolete.  Please use -2D or -2Dmerge\n");
+          // For TOF-Laue data -pad is the number of TOF channels on each
+          // side of a spot in its 3D box (as in the original PCS d*TREK).
+          if (!bTOFLaue)
+            printf("WARNING: -pad option is now obsolete.  Please use -2D or -2Dmerge\n");
+        }
+      else if ( ("-cor" == sTemp) || ("-type" == sTemp) )
+        {
+          // TOF-Laue detector response correction: -cor V/Nb_file -type mode
+          i++;
+          if (i < argc)
+            {
+              if ("-cor" == sTemp)
+                sCorFile = (const char*) argv[i];
+              else
+                sCorType = (const char*) argv[i];
+            }
+          else
+            {
+              DTREK_ERROR(5, sMissingOption);
+            }
         }
       else if ("-minrefs" == sTemp)
       {
@@ -935,6 +961,16 @@ int CDTMainFind::nExecute(unsigned int argc, char* argv[])
     }
  //-2011-07-20 JWP
 
+  if ("" != sCorFile)
+    {
+      int nMode = nPCSResponseMode(sCorType);
+      if ( !bTOFLaue || (0 > nMode) )
+        {
+          DTREK_ERROR(6, "ERROR: -cor/-type only apply to TOF-Laue data, with -type none, pixel, segment, full, 3 or 204.");
+        }
+      (void) CPCSVolume::poGetInstance()->nSetResponse(sCorFile, nMode);
+    }
+
   do
     {
       poFind->m_a2nSeqNum[0]        = a20nSeqInfo[nSeqCount][0];
@@ -946,7 +982,9 @@ int CDTMainFind::nExecute(unsigned int argc, char* argv[])
       // If the sequence number start and end are the same, we want to
       // force 2D search when the method is 3D.
           
-      if (eFind_unknown_method == eMethod)
+      if ( (eFind_unknown_method == eMethod) && bTOFLaue )
+        poFind->m_eMethod = eFind_2D_merge_method;  // Merge spots across TOF channels
+      else if (eFind_unknown_method == eMethod)
         //poFind->m_eMethod = eFind_2D_merge_method;
         poFind->m_eMethod = eFind_2D_method;
       else
@@ -1347,6 +1385,9 @@ int CDTMainFind::nExecute(unsigned int argc, char* argv[])
         poReflnlist = poNewList;
         poFind->m_poReflnlist = poNewList;
         printf("\n");
+
+        if (bTOFLaue)
+          (void) poFind->nRefineTOF3D(nTOFPad);
     };
     
   // Write out the reflnlist with found spots, even if there were errors finding
@@ -1622,6 +1663,16 @@ void CDTMainFind::vError(const int nErrorNum, const Cstring& sMessage)
        "                      On Windows systems, files are not purged regardless.\n\n"
        " -tables              Output statistics of found peaks in terms of resolution\n"
        "                      and I/Sigma.\n\n"
+       "TOF-Laue (LANSCE PCS) options:\n\n"
+       " -cor sFile -type sMode\n"
+       "                      Detector response correction from a V/Nb run of the\n"
+       "                      same format.  sMode: none, pixel (default), segment, full,\n"
+       "                      spectrum, or the legacy codes 3 (= spectrum) and 204\n"
+       "                      (= full).\n"
+       " -pad nPad            TOF channels on each side of a merged spot used to refine\n"
+       "                      its 3D centroid and intensity (default 4).\n\n"
+       "                      For TOF-Laue data the 2D spots of all channels are merged\n"
+       "                      and fDetwavelength (the observed wavelength) is written.\n\n"
        "Information about scan angles and mask/non-uniformity of response is\n"
        "determined from the headers of the input image files.  If the\n"
        "headers are incorrect, they may be edited with dtheaderedit.\n\n"

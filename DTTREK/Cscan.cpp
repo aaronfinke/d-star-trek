@@ -52,7 +52,8 @@
 //+Include files
 
 #include "Dtrek.h"
-#include "Cscan.h"         // Class definition and prototypes
+#include "Cscan.h"         // Class definition and prototypes
+#include "CTOFLaue.h"
 #include "dtrekdefs.h"
 //+Definitions, constants, and initialization of static member variables
 
@@ -156,6 +157,13 @@ Cscan::Cscan(Cimage_header& oHeader, const Cstring &sPre)
 	      nStat++;
 	    }
 	}
+      // A TOF-Laue scan whose template has no ? marks is a single
+      // NeXus file holding all TOF channels.
+
+      m_bOneFileScan =    CTOFLaue::bIsTOFLaue(oHeader)
+                       && (-1 == m_sFileTemplate.find('?'))
+                       && (-1 == m_sFileTemplate.find('#'));
+
       nTemp = oHeader.nGetValue(sPrefix + ms_sScanSeqInfo, 3, fValues);
       if (0 == nTemp)
 	{
@@ -322,6 +330,7 @@ int Cscan::nInitValues(void)
   m_nFileStepNum            = 1;
   m_nFileSeqNum             = m_nFileStartSeqNum;
   m_nNumImages              = 0;
+  m_bOneFileScan            = false;
   m_nNumImagesAlloc         = 0;
   m_nNumImagesAvail         = 0;
   m_poTheImages             = NULL;
@@ -403,6 +412,10 @@ int Cscan::nGetImage(Cimage* poImage)
 //	  poImage = new Cimage (sName);
 // Instead return error
 	  return (-1);
+	}
+      else if (m_bOneFileScan)
+	{
+	  return (poImage->nRead(sName, m_nFileSeqNum));
 	}
       else
 	{
@@ -511,7 +524,12 @@ int Cscan::nGetImageName(Cstring* psName)
 	  else
 	    nLen = 1;
 	}
-      if ( (1 <= nLen) || (-1 == nFirstHash) )
+      if (m_bOneFileScan)
+	{
+	  // No ? marks expected: the filename is the template itself
+	  nStat = 0;
+	}
+      else if ( (1 <= nLen) || (-1 == nFirstHash) )
 	{
 	  // All the ? marks were used up or there were no ? marks
 //mrp	  cout << "ERROR: Cscan not enough ?'s in m_sFileTemplate!\n";

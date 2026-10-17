@@ -79,3 +79,8 @@ DTTREK/dtx2refln
 DTTREK/libdtrek_darwin.a
 DTTREK/Cimage_header.o
 DTTREK/dtreksys.o
+DTTREK/dtpcsproject
+DTTREK/dtref2afout
+DTTREK/dtlauenorm
+DTTREK/tCTOFLaue
+tools/pcs/__pycache__/

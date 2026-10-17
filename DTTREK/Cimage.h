@@ -90,7 +90,8 @@ enum eImage_compression_types {
   eImage_PCK1_compression,
   eImage_CBF_compression,
   eImage_BAS2000_compression,
-  eImage_HIPIC_compression
+  eImage_HIPIC_compression,
+  eImage_PCSNXS_compression     // LANSCE PCS TOF NeXus (HDF5), see nexuspcs.h
 };
 
 typedef struct _tagPIXEL_INTENSITY_BIN

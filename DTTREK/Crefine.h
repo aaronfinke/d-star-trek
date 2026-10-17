@@ -55,6 +55,7 @@
 #include "Ccrystal.h"
 #include "Crotation.h"
 #include "Creflnlist.h"
+#include "CTOFLaue.h"
 #if ((!defined(SSI_PC)) && (!defined(NO_X_WINDOWS)))
 #include "CXprop.h"
 #endif
@@ -153,7 +154,19 @@ public:
   float  m_a7fReflnNumbers[7];                  // Same, but containing total photon counts.
   float  m_fRMSDEG;
   float  m_fRMSMM;
-  float  m_fRMSANG;                             // r.m.s difference between obs & calc 
+  float  m_fRMSANG;                             // r.m.s difference between obs & calc
+
+  // TOF-Laue (LANSCE PCS).  The crystal is stationary and each spot has its
+  // own wavelength from its TOF channel.  The residual is |P (Xobs - Xcalc)|
+  // in absolute reciprocal space, where P scales the component along Xcalc
+  // (which mainly reflects errors in the observed wavelength) by
+  // m_fTOFRadialWeight.  m_fRMSDEG then holds the r.m.s. TOF channel error.
+  bool     m_bTOFLaue;
+  CTOFLaue m_oTOFLaue;
+  float    m_fTOFRadialWeight;
+  float    m_fMinIntensity;                     // -threshold: minimum spot intensity
+  int      m_nFI_fDetWave;                      // fDetwavelength field of m_poReflnlist
+  int      m_nFI_fCalcWave;                     // fCalwavelength field of m_poReflnlist
   float  m_a4fAvgDistanceToNearest[4];          // Average distance to nearest spot. [0],[1] = values [2],[3] = counts
   float  m_fFindPad;                            // Padding to use during sequence refinements.
   float  m_a2fResoUsed[2];                      // Min/Max resolution limits used.
@@ -481,6 +494,10 @@ public:
     void vSetResolution(const float fResoMin, const float fResoMax);
     void vSetRejectLimits(const float fRejLimX, const float fRejLimY,
 		          const float fRejLimR);
+    inline void vSetTOFLaue(const CTOFLaue& roTOFLaue)
+      { m_oTOFLaue = roTOFLaue; m_bTOFLaue = m_oTOFLaue.bIsAvailable(); }
+    inline bool bIsTOFLaue(void) { return (m_bTOFLaue); }
+    inline CTOFLaue* poGetTOFLaue(void) { return (&m_oTOFLaue); }
     int nDoRefinement(const Cstring& sRefineOptions,
 		      Creflnlist *poReflnlistOther=NULL);
     int nTwinReject(double fMinFractionIntensityToIndex,double fMaxRMSMM);

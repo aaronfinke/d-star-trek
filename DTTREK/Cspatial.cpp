@@ -79,6 +79,14 @@ Cstring Cspatial::ms_sSpatialTypeSimple        = D_K_SpatialTypeSimple ;
 Cstring Cspatial::ms_sSpatialTypeComplex       = D_K_SpatialTypeComplex;
 Cstring Cspatial::ms_sSpatialTypeNone          = D_K_SpatialTypeNone;
 Cstring Cspatial::ms_sSpatialTypeInterp        = D_K_SpatialTypeInterp;
+Cstring Cspatial::ms_sSpatialTypeCylinder      = "Cylinder_spatial";
+Cstring Cspatial::ms_sSpatialParallax          = "SPATIAL_PARALLAX";
+
+// Parallax correction of the original PCS d*TREK, recovered from its
+// output (fObs_Xmm vs fObs_pixel0 in dtrefine .ref files of 2011 and 2013).
+
+static const float s_c_a2fPCSParallax[2]       = { 1.006472f, 0.001257f };
+static const float s_c_fPCSRadius              = 730.0f;
 Cstring Cspatial::ms_sCalpar                   = ".calpar";
 Cstring Cspatial::ms_sX_int                    = ".x_int";
 Cstring Cspatial::ms_sY_int                    = ".y_int";
@@ -228,7 +236,44 @@ Cspatial::Cspatial(Cimage_header& oHeader, const Cstring& sPre)
 	    {
 	      cout << "Cspatial: error reading simple spatial distortion from header!\n";
 	      nStat++;
-	    }	
+	    }
+	}
+      else if (ms_sSpatialTypeCylinder == sTemp)
+	{
+	  // LANSCE PCS cylindrical detector, mapped to a virtual flat detector.
+	  // The INFO keyword is the same as for a simple spatial distortion,
+	  // the radius is the third value of DETECTOR_SIZE.
+
+	  float a3fSize[3];
+
+	  nTemp = oHeader.nGetValue(sPrefix + ms_sSpatialDistortionInfo,
+				    4, fValues);
+	  if (0 == nTemp)
+	    {
+	      (void) nInitValues(fValues[0], fValues[1],
+				 fValues[2], fValues[3],
+				 nDim0, nDim1,
+				 m_a2x2fDirVec[0][0],
+				 m_a2x2fDirVec[0][1],
+				 m_a2x2fDirVec[1][0],
+				 m_a2x2fDirVec[1][1]
+				 );
+	      m_bPCSCylinder = true;
+	      m_fRadius      = s_c_fPCSRadius;
+	      if (   (0 == oHeader.nGetValue(sPrefix + "DETECTOR_SIZE", 3, a3fSize))
+		  && (0.0f < a3fSize[2]) )
+		m_fRadius = a3fSize[2];
+	      if (0 != oHeader.nGetValue(sPrefix + ms_sSpatialParallax, 2, m_a2fParallax))
+		{
+		  m_a2fParallax[0] = s_c_a2fPCSParallax[0];
+		  m_a2fParallax[1] = s_c_a2fPCSParallax[1];
+		}
+	    }
+	  else
+	    {
+	      cout << "Cspatial: error reading cylinder spatial distortion from header!\n";
+	      nStat++;
+	    }
 	}
       else if (ms_sSpatialTypeComplex == sTemp)
 	{
@@ -425,7 +470,12 @@ int Cspatial::nInitValues(void)
 
   m_fCylindricalDetectorShift = 0.0f;
   //
-  
+
+  m_bPCSCylinder        = false;
+  m_a2fParallax[0]      = s_c_a2fPCSParallax[0];
+  m_a2fParallax[1]      = s_c_a2fPCSParallax[1];
+  m_fParallaxLambda     = 0.0f;
+
   m_a2x2fDirVec[0][0]   = 1.0;
   m_a2x2fDirVec[0][1]   = 0.0;
   m_a2x2fDirVec[1][0]   = 0.0;
@@ -930,6 +980,21 @@ int Cspatial::nPixeltoMM(const float fPx0,
       // *pfXmm = *pfXmm - xcenter;
       // *pfYmm = *pfYmm - ycenter;
 
+      if (m_bPCSCylinder)
+      {
+          // Arc length along Y and height along X on a cylinder of radius
+          // m_fRadius to a virtual flat detector tangent at the beam.
+
+          double dPhi = (double)*pfYmm / (double)m_fRadius;
+          if (fabs(dPhi) >= 0.5 * Gs_dPI)
+              return (1);
+          double dCos = cos(dPhi);
+          *pfYmm = (float)(m_fRadius * tan(dPhi));
+          *pfXmm = (float)(*pfXmm / dCos
+                           * (m_a2fParallax[0] + m_a2fParallax[1] * m_fParallaxLambda));
+          return (0);
+      }
+
       if( eSpatial_cylindrical_geometry == m_eThe_Geometry )
       {
           // Adjust above for cylindrical (rapid) geometry.
@@ -1008,7 +1073,17 @@ int Cspatial::nMMtoPixel(float fXmm,
         }
       else if ( eSpatial_simple_type == m_eThe_Type )
         {
-          if( eSpatial_cylindrical_geometry == m_eThe_Geometry )
+          if (m_bPCSCylinder)
+          {
+              // Virtual flat detector back to arc length and height on the
+              // PCS cylinder (inverse of nPixeltoMM).
+
+              double dPhi = atan((double)fYmm / (double)m_fRadius);
+              fYmm = (float)(m_fRadius * dPhi);
+              fXmm = (float)(fXmm * cos(dPhi)
+                             / (m_a2fParallax[0] + m_a2fParallax[1] * m_fParallaxLambda));
+          }
+          else if( eSpatial_cylindrical_geometry == m_eThe_Geometry )
           {
               // Adjust above for cylindrical (rapid) geometry.
 
@@ -1404,8 +1479,15 @@ int Cspatial::nUpdateHeader(Cimage_header *poHeader, const Cstring &sPre)
   
   if (eSpatial_simple_type == m_eThe_Type)
     {
-      poHeader->nReplaceValue(sPrefix + ms_sSpatialDistortionType,
-			      ms_sSpatialTypeSimple);
+      if (m_bPCSCylinder)
+        {
+          poHeader->nReplaceValue(sPrefix + ms_sSpatialDistortionType,
+                                  ms_sSpatialTypeCylinder);
+          poHeader->nReplaceValue(sPrefix + ms_sSpatialParallax, 2, m_a2fParallax, 6);
+        }
+      else
+        poHeader->nReplaceValue(sPrefix + ms_sSpatialDistortionType,
+                                ms_sSpatialTypeSimple);
       float fTemp[4];
       fTemp[0] = m_a2fBeamPx[0];
       fTemp[1] = m_a2fBeamPx[1];

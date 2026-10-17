@@ -1283,12 +1283,83 @@ int Cdetector::nScaleSOnPlate(const float fS[3], float fTS[3])
         return 1;
 
     vMulVec3DScalar(fS, fRMFAC, fTS);
-    
-    return 0; 
+
+    return 0;
+}
+
+double Cdetector::dCalcTOFLaueL2(const double a3fS[3])
+{
+  // The axis of the PCS detector cylinder is the fast pixel direction and
+  // the crystal is on that axis, so the flight path to the cylinder (radius
+  // = detector distance D) along the unit vector S is D / |S perp. to axis|,
+  // i.e. sqrt(D^2 + h^2) with h the height along the axis.
+
+  double a3x3fDD[3][3], a3fDN[3], a3fAxis[3], a3fPerp[3], dPerp;
+
+  (void) nCalcGetDDDN(&a3x3fDD[0][0], a3fDN);
+  for (int i = 0; i < 3; i++)
+    a3fAxis[i] = a3x3fDD[0][i];
+  (void) fNormVec3D(a3fAxis);
+  vMulVec3DScalar(a3fAxis, fDot3D(a3fS, a3fAxis), a3fPerp);
+  vSubVec3DVec3D(a3fS, a3fPerp, a3fPerp);
+  dPerp = fLenVec3D(a3fPerp);
+  if (1.0e-6 >= dPerp)
+    return (0.0);
+  return (fabs(fGetDistance()) / dPerp);
+}
+
+int Cdetector::nCalcTOFLaueObs(const CTOFLaue& roTOFLaue,
+                               const float fPx0, const float fPx1, const double dChan,
+                               double *pdLambda, float a3fMM[3], double a3fS[3],
+                               double *pdL2)
+{
+  // The parallax correction of the pixel position depends on the wavelength,
+  // and the wavelength depends (weakly) on the flight path to the pixel, so
+  // iterate a few times starting without parallax correction.
+
+  int    nIter;
+  double a3x3fDD[3][3], a3fDN[3], a3fVDC[3];
+  double dL2     = 0.0;
+  double dLambda = 0.0;
+  float  f1MM, f2MM, f3MM;
+
+  (void) nCalcGetDDDN(&a3x3fDD[0][0], a3fDN);
+  m_poSpatial->vSetParallaxWavelength(0.0f);
+  if (0 != m_poSpatial->nPixeltoMM(fPx0, fPx1, &f1MM, &f2MM, &f3MM))
+    return (1);
+  for (nIter = 0; nIter < 4; nIter++)
+    {
+      a3fVDC[0] = f1MM;
+      a3fVDC[1] = f2MM;
+      a3fVDC[2] = f3MM;
+      vMulMat3DVec3D(a3x3fDD, a3fVDC, a3fS);
+      (void) fNormVec3D(a3fS);
+      dL2     = dCalcTOFLaueL2(a3fS);
+      dLambda = roTOFLaue.dChanToLambda(dChan, dL2);
+      if (3 == nIter)
+        break;
+      m_poSpatial->vSetParallaxWavelength((float) dLambda);
+      if (0 != m_poSpatial->nPixeltoMM(fPx0, fPx1, &f1MM, &f2MM, &f3MM))
+        {
+          m_poSpatial->vSetParallaxWavelength(0.0f);
+          return (1);
+        }
+    }
+  m_poSpatial->vSetParallaxWavelength(0.0f);
+  if (0.0 >= dLambda)
+    return (2);
+
+  *pdLambda = dLambda;
+  a3fMM[0]  = f1MM;
+  a3fMM[1]  = f2MM;
+  a3fMM[2]  = f3MM;
+  if (NULL != pdL2)
+    *pdL2 = dL2;
+  return (0);
 }
 
 
-int Cdetector::nCalcDetCoords(const float fXR[3], 
+int Cdetector::nCalcDetCoords(const float fXR[3],
                               const float fS0[3],
 			                  float *pfXmm, 
                               float *pfYmm,
@@ -1513,6 +1584,23 @@ Cdetector::nUpdateFromHeader(Cimage_header &roHeader, const Cstring& rsPre,
     //            always want nowadays
     //      nTemp = roHeader.nGetValue(m_sPrefix + ms_sDetectorVectors, 6,
     //				&m_a2x3fVector[0][0]);
+
+    // The LANSCE PCS cylindrical detector is the exception: its headers
+    // have DETECTOR_VECTORS=-1 0 0 0 -1 0 and the original PCS d*TREK
+    // used them.
+
+    if ( (NULL != m_poSpatial) && m_poSpatial->bIsPCSCylinder() )
+      {
+        float a6fVec[6];
+        if (0 == roHeader.nGetValue(m_sPrefix + ms_sDetectorVectors, 6, a6fVec))
+          {
+            for (int i = 0; i < 3; i++)
+              {
+                m_a2x3fVector[0][i] = a6fVec[i];
+                m_a2x3fVector[1][i] = a6fVec[3+i];
+              }
+          }
+      }
 
     nTemp = roHeader.nGetValue(m_sPrefix + ms_sDetectorDimensions, 2, m_a2nDim);
     

@@ -309,6 +309,8 @@ DTREK_WIN_DLL_DATA_EXPORT  static Cstring ms_snNonunfFlag;
   static Cstring ms_sfCalcMosCoeffB;
   static Cstring ms_sfPartiality;
   static Cstring ms_sfResolution;
+  static Cstring ms_sfDetWavelength;   // "fDetwavelength": observed TOF-Laue wavelength
+  static Cstring ms_sfCalcWavelength;  // "fCalwavelength": predicted TOF-Laue wavelength
   static Cstring ms_sfDetResolution;
   static Cstring ms_sfRecipCoord0;
   static Cstring ms_sfRecipCoord1;

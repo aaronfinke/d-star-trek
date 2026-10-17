@@ -82,6 +82,7 @@
 
 #include "Dtrek.h"
 #include "Cintegrate.h"
+#include "nexuspcs.h"
 #include "Crotation.h"
 #include "CinterpMesh.h"
 
@@ -135,6 +136,8 @@ int CDTMainIntegrate::nExecute(unsigned int argc,      // Command line argument 
   int            nStat = 0;
   Cstring        sScanFile  = sDtrekGetPrefix() + "dtrefine.head";
   Cstring        sOut;
+  Cstring        sCorFile = "";       // TOF-Laue detector response (V/Nb) file (-cor)
+  Cstring        sCorType = "full";   // and correction mode (-type)
   Cstring        sStub;
   int            nNumImages;
   int            nSeqNumStart = -1;
@@ -267,10 +270,17 @@ int CDTMainIntegrate::nExecute(unsigned int argc,      // Command line argument 
   for (i = 0; i < argc; i++)
     {
       sTemp = (const char*) argv[i];
-      if ( ("-help" == sTemp) || ("-h" == sTemp) )
+      if (   ("-h" == sTemp) && (i + 2 < argc)
+          && Cstring(argv[i+1]).bIsNumeric() && Cstring(argv[i+2]).bIsNumeric() )
+        {
+          // -h hmax hmin: index limits (TOF-Laue, as in the original PCS d*TREK),
+          // parsed below
+          i += 2;
+        }
+      else if ( ("-help" == sTemp) || ("-h" == sTemp) )
         {
           DTREK_ERROR(0, "");
-        } 
+        }
       else if (i == 0)
         {
           sScanFile = sTemp;
@@ -515,10 +525,109 @@ int CDTMainIntegrate::nExecute(unsigned int argc,      // Command line argument 
               DTREK_ERROR(5, sMissingOption);
           }
       }
+      else if (   (("-h" == sTemp) || ("-k" == sTemp) || ("-l" == sTemp))
+               && (i + 2 < argc) )
+      {
+          // TOF-Laue index limits, e.g. -h 100 -100 (either order)
+          int nIdx = ("-h" == sTemp) ? 0 : (("-k" == sTemp) ? 1 : 2);
+          int a2nLim[2];
+          if (   (1 != sscanf(argv[i+1], "%d", &a2nLim[0]))
+              || (1 != sscanf(argv[i+2], "%d", &a2nLim[1])) )
+              DTREK_ERROR(6, sInvalidArgument);
+          if (!poIntegrate->m_bHKLLimits)
+          {
+              // Default: no limits on the other two indices
+              for (j = 0; j < 6; j += 2)
+              {
+                  poIntegrate->m_a6nHKLLimits[j]   = -10000;
+                  poIntegrate->m_a6nHKLLimits[j+1] =  10000;
+              }
+          }
+          poIntegrate->m_a6nHKLLimits[2*nIdx]   = a2nLim[0];
+          poIntegrate->m_a6nHKLLimits[2*nIdx+1] = a2nLim[1];
+          poIntegrate->m_bHKLLimits = TRUE;
+          i += 2;
+      }
+      else if ("-rect" == sTemp)
+      {
+          // TOF-Laue: only integrate reflections predicted in this detector
+          // area: px0min px1min px0max px1max (as in the original PCS d*TREK)
+          for (j = 0; j < 4; j++)
+          {
+              if ( (i + 1 >= argc) || (1 != sscanf(argv[i+1], "%d", &poIntegrate->m_a4nRect[j])) )
+                  DTREK_ERROR(6, sInvalidArgument);
+              i++;
+          }
+          poIntegrate->m_bRect = TRUE;
+      }
+      else if ("-flat" == sTemp)
+      {
+          // Accepted for compatibility with the original PCS d*TREK: the
+          // cylinder is always mapped to a virtual flat detector.
+      }
+      else if ( ("-cor" == sTemp) || ("-type" == sTemp) )
+      {
+          // TOF-Laue detector response correction: -cor V/Nb_file -type mode
+          i++;
+          if (i >= argc)
+              DTREK_ERROR(5, sMissingOption);
+          if ("-cor" == sTemp)
+              sCorFile = (const char*) argv[i];
+          else
+              sCorType = (const char*) argv[i];
+      }
+      else if ("-tofint" == sTemp)
+      {
+          // TOF-Laue integration method: sum (default) or shoebox
+          i++;
+          if (i >= argc)
+              DTREK_ERROR(5, sMissingOption);
+          sTemp = (const char*) argv[i];
+          if ("sum" == sTemp)
+              poIntegrate->m_bTOFSum = TRUE;
+          else if ("shoebox" == sTemp)
+              poIntegrate->m_bTOFSum = FALSE;
+          else
+              DTREK_ERROR(6, sInvalidArgument);
+      }
+      else if ("-tofradius" == sTemp)
+      {
+          // TOF-Laue summation: peak radius [background inner outer offsets] (pixels)
+          float fTemp2;
+          if ( (i + 1 >= argc) || (1 != sscanf(argv[i+1], "%f", &fTemp2)) || (0.5f > fTemp2) )
+              DTREK_ERROR(6, sInvalidArgument);
+          poIntegrate->m_fTOFPeakRadius = fTemp2;
+          i++;
+          if (   (i + 2 < argc)
+              && (1 == sscanf(argv[i+1], "%f", &fTemp2)))
+          {
+              float fOuter;
+              if (1 == sscanf(argv[i+2], "%f", &fOuter))
+              {
+                  poIntegrate->m_fTOFBackInner = fTemp2;
+                  poIntegrate->m_fTOFBackOuter = fOuter;
+                  i += 2;
+              }
+          }
+      }
+      else if ("-wave" == sTemp)
+      {
+          // TOF-Laue wavelength range (either order)
+          float a2fWave[2];
+          if (   (i + 2 >= argc)
+              || (1 != sscanf(argv[i+1], "%f", &a2fWave[0]))
+              || (1 != sscanf(argv[i+2], "%f", &a2fWave[1])) )
+              DTREK_ERROR(6, sInvalidArgument);
+          if (poIntegrate->m_bTOFLaue)
+              poIntegrate->m_oTOFLaue.vSetLambdaRange(a2fWave[0], a2fWave[1]);
+          else
+              cout << "WARNING: -wave ignored, the header does not describe TOF-Laue data.\n";
+          i += 2;
+      }
         else if ("-reso" == sTemp)
       {
           i++;
-          
+
           Cstring       sResoParameters("");
           while( i < argc && '-' != argv[i][0] )
           {
@@ -1104,6 +1213,16 @@ int CDTMainIntegrate::nExecute(unsigned int argc,      // Command line argument 
 #ifdef PARALLEL
   nStat = par_init();
 #endif
+  if ("" != sCorFile)
+    {
+      int nMode = nPCSResponseMode(sCorType);
+      if ( !poIntegrate->m_bTOFLaue || (0 > nMode) )
+        {
+          DTREK_ERROR(6, "ERROR: -cor/-type only apply to TOF-Laue data, with -type none, pixel, segment, full, spectrum, 3 or 204.");
+        }
+      (void) CPCSVolume::poGetInstance()->nSetResponse(sCorFile, nMode);
+    }
+
   nStat = poIntegrate->nIntegrate(nNumImages);
 #if ((!defined(SSI_PC)) && (!defined(NO_X_WINDOWS)))
   poIntegrate->m_poXprop = poXprop;
@@ -1352,6 +1471,35 @@ void CDTMainIntegrate::vError(const int nErrorNum, const Cstring& sMessage)
        "             some HKL in file.ref will get printed.                         \n\n"
        "-socketport  [nPort]\n"
        "             Connect to a waiting socket on nPort and send update information.\n"
+       "TOF-Laue (LANSCE PCS) options:\n\n"
+       "-cor sFile -type sMode\n"
+       "             Detector response correction from a V/Nb run (NeXus/HDF5) of\n"
+       "             the same format.  sMode: none, pixel, segment, full (default),\n"
+       "             spectrum, or the legacy codes 204 (= full) and 3 (= spectrum).\n"
+       "             Only spectrum removes the incident spectrum; leave that to the\n"
+       "             wavelength normalization (dtlauenorm or LAUENORM).\n\n"
+       "-tofint sum|shoebox\n"
+       "             Integration method.  sum (default): the peak is the sum over a\n"
+       "             disk at the predicted position over the predicted TOF window\n"
+       "             (2 + 0.5/sin(theta) channels by default, TOF_WIDTH_MODEL), minus\n"
+       "             the mean of a background annulus in each channel.  shoebox: the\n"
+       "             d*TREK rotation-image shoebox method (used before; worse for\n"
+       "             weak TOF-Laue spots).\n\n"
+       "-tofradius fRadius [fInner fOuter]\n"
+       "             Peak disk radius in pixels (default 3.5) and the background\n"
+       "             annulus from fRadius+fInner to fRadius+fOuter (default 2.5 6).\n\n"
+       "-flat        Accepted for compatibility (the cylindrical detector is always\n"
+       "             mapped to a virtual flat detector).\n\n"
+       "-wave fLambda1 fLambda2\n"
+       "             Only integrate reflections with wavelengths in this range.\n\n"
+       "-h nMax nMin, -k nMax nMin, -l nMax nMin\n"
+       "             Index limits of the predicted reflections (e.g. -h 100 -100).\n"
+       "             A -h that is not followed by two numbers still prints this help.\n\n"
+       "-rect nMinPx0 nMinPx1 nMaxPx0 nMaxPx1\n"
+       "             Only integrate reflections predicted inside this rectangle.\n\n"
+       "             For TOF-Laue data the images of the scan are the TOF channels\n"
+       "             of one file (-seq 0 95), intensities are divided by\n"
+       "             fCalc_lorentz = 1/sin^2(theta) and fCalwavelength is written.\n\n"
        "-help        Print this help text.             \n\n"
        "Information about scan angles and non-uniformity of response is\n"
        "determined from the headers of the input image files.  If the\n"

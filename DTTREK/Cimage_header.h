@@ -94,7 +94,8 @@ enum eImage_format_types {
   enImage_format_MAR_IP,
   enImage_format_CBFDTREK,
   enImage_format_BAS2000,
-  enImage_format_HIPIC
+  enImage_format_HIPIC,
+  enImage_format_PCS_NEXUS
 };
 
 //+Code begin

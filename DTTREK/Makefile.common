@@ -1195,6 +1195,12 @@ marccd.o:	marccd.cpp marccd.h
 
 cbfdtrek.o:	cbfdtrek.cpp cbfdtrek.h
 
+nexuspcs.o:	nexuspcs.cpp nexuspcs.h CTOFLaue.h
+
+CTOFLaue.o:	CTOFLaue.cpp CTOFLaue.h
+
+CLaueNorm.o:	CLaueNorm.cpp CLaueNorm.h Creflnlist.h Cspacegroup.h dtsvd.h
+
 marip.o:	marip.cpp marip.h
 
 winbmp.o:	winbmp.cpp winbmp.h
@@ -1328,3 +1334,37 @@ tss.o:		tss.cpp
 8mm.tarlis:
 		rsh guest@tapes dd if=/dev/rst0 ibs=1024 | tar tvf - >& $@
 
+
+# LANSCE PCS TOF-Laue tools
+
+dtpcsproject.o:	dtpcsproject.cpp nexuspcs.h Cimage.h Cimage_header.h
+
+dtpcsproject:	dtpcsproject.o Cscan.o Cimage.o CGonioMask.o CGonioShadow.o Cstring.o Crotation.o \
+		Cimage_header.o Cnonunf.o CImageWait.o ImagePool.o BitmapRLE.o C3Ddata.o CScanBitmap.o Cprofit2D.o CinterpMesh.o CSphericalHarmonic.o Cstat.o Crefln.o \
+		Creflnlist.o ResoBins.o Ccrystal.o Cspacegroup.o Cdetector.o Csource.o \
+		Cgoniometer.o Cspatial.o Cwavelength.o dtsvd.o dtarray.o \
+		dtreklogic.o dskio.o dtrekvec.o dtreksys.o $(MSCOBJS)
+		$(CC) -o $@ $^  $(CCFLAGS) $(GLIBDIR) $(LIBS)
+
+dtref2afout.o:	dtref2afout.cpp
+
+dtref2afout:	dtref2afout.o
+		$(CC) -o $@ $^  $(CCFLAGS)
+
+dtlauenorm.o:	dtlauenorm.cpp CLaueNorm.h Creflnlist.h Cspacegroup.h Cimage_header.h
+
+dtlauenorm:	dtlauenorm.o Cscan.o Cimage.o CGonioMask.o CGonioShadow.o Cstring.o Crotation.o \
+		Cimage_header.o Cnonunf.o CImageWait.o ImagePool.o BitmapRLE.o C3Ddata.o CScanBitmap.o Cprofit2D.o CinterpMesh.o CSphericalHarmonic.o Cstat.o Crefln.o \
+		Creflnlist.o ResoBins.o Ccrystal.o Cspacegroup.o Cdetector.o Csource.o \
+		Cgoniometer.o Cspatial.o Cwavelength.o dtsvd.o dtarray.o \
+		dtreklogic.o dskio.o dtrekvec.o dtreksys.o $(MSCOBJS)
+		$(CC) -o $@ $^  $(CCFLAGS) $(GLIBDIR) $(LIBS)
+
+tCTOFLaue.o:	tCTOFLaue.cpp CTOFLaue.h Cdetector.h Creflnlist.h
+
+tCTOFLaue:	tCTOFLaue.o Cscan.o Cimage.o CGonioMask.o CGonioShadow.o Cstring.o Crotation.o \
+		Cimage_header.o Cnonunf.o CImageWait.o ImagePool.o BitmapRLE.o C3Ddata.o CScanBitmap.o Cprofit2D.o CinterpMesh.o CSphericalHarmonic.o Cstat.o Crefln.o \
+		Creflnlist.o ResoBins.o Ccrystal.o Cspacegroup.o Cdetector.o Csource.o \
+		Cgoniometer.o Cspatial.o Cwavelength.o dtsvd.o dtarray.o \
+		dtreklogic.o dskio.o dtrekvec.o dtreksys.o $(MSCOBJS)
+		$(CC) -o $@ $^  $(CCFLAGS) $(GLIBDIR) $(LIBS)

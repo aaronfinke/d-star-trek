@@ -838,10 +838,22 @@ void CDTMainRefine::vError(const int nErrorNum, const Cstring& sMessage)
           "                       will adjust the value of the goniometer rotation vector\n"
           "                       attached to the physical crystal.\n\n"
           " SourceWave, SourceRot1, SourceRot2, SourceRot\n\n"
+          " TOFDelay              TOF-Laue: TOF delay (us) added to the channel TOF.\n"
+          "                       (L1 is not refined: it is degenerate with the cell.)\n\n"
           " All                   All parameters.\n\n";
           "                       For twinned samples using '-twin 0', each -go expands to:\n"
           "                       +CrysAll -twin 1 -go -twin 2 -go [...] +DetAll\n"
           "                       -twin -1 -go -DetAll -twin -2 -go [...]\n\n";
+      cout <<"TOF-Laue (LANSCE PCS) options:\n\n"
+          " -wave fLambda1 fLambda2\n"
+          "                      Only use spots with observed wavelengths in this range.\n"
+          " -threshold fMinI     Only use spots with intensities of at least fMinI.\n"
+          " -rej fRejX fRejY fRejChan\n"
+          "                      For TOF-Laue data the third limit is in TOF channels.\n"
+          " +TOFDelay            Refine the TOF delay (see the parameter list above).\n\n"
+          "                      The rotation-related parameters (mosaicity, wavelength)\n"
+          "                      are not refined for TOF-Laue data; the residuals are\n"
+          "                      reported in mm and in TOF channels.\n\n";
       cout <<"Examples:\n"
           " dtrefine dtindex.head dtfind.ref +All -verbose 0 -go -go -go -go -verbose 1 -go\n"
           " dtrefine dtrefine.head -seq 1 -seq 2 +All -verbose 0 -go -go -go -verbose 1 -go\n"

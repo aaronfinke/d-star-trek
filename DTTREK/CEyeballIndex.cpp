@@ -49,6 +49,7 @@
 #include "Cdetector.h"
 #include "Csource.h"
 #include "Crotation.h"
+#include "CTOFLaue.h"
 
 #include "memory.h"
 #ifdef DOSEM_STATUSBAR
@@ -2006,6 +2007,12 @@ bool CEyeballIndex::bRefineBeam(double fRejectFraction,
     float           fTS[3];
     float           fXR[3];
 
+    // TOF-Laue: spots have their own wavelength (from nCalcRecipLatticePoints)
+    // and the crystal does not rotate.
+    bool            bTOFLaue  = CTOFLaue::bIsTOFLaue(m_oHeader);
+    int             nFI_Wave  = m_oList.nGetFieldIndex(Creflnlist::ms_sfDetWavelength);
+    float           fLambda;
+
     *pdBeamPixChange = 0.0;
 
     if( m_oList.m_nFI_fGonio1 >= 0 )
@@ -2044,10 +2051,17 @@ bool CEyeballIndex::bRefineBeam(double fRejectFraction,
     
     oGoniometer.vCalcGetRotMatrix(&fGonMatrix[0][0],oGoniometer.nGetNum(oRotation.sGetName()));
     
-    if (oGoniometer.nGetRotVector(oRotation.sGetName(),&fRotVec[0]))
+    if (bTOFLaue)
+    {
+        // Stationary crystal: no rotation axis is needed
+        fRotVec[0] = 1.0f;
+        fRotVec[1] = 0.0f;
+        fRotVec[2] = 0.0f;
+    }
+    else if (oGoniometer.nGetRotVector(oRotation.sGetName(),&fRotVec[0]))
     {
         nStat =1;
-        
+
         sError = "Beam check will not execute because of a problem with crystal goniometer.";
 
         return false;
@@ -2166,16 +2180,27 @@ bool CEyeballIndex::bRefineBeam(double fRejectFraction,
                         poRefln = m_oList.poGetRefln(nRef);       
                         f1PX = poRefln->fGetField(m_oList.m_nFI_fObsPx0);
                         f2PX = poRefln->fGetField(m_oList.m_nFI_fObsPx1);
-                        fRot = poRefln->fGetField(m_oList.m_nFI_fObsRotMid);       
-                        nStat = oDetector.m_poSpatial->nPixeltoMM(f1PX, f2PX, &f1MM, &f2MM, &f3MM);       
-                        vConvRotVec3DMat3D(-fRot, fRotVec, &fInvRot[0][0]);       
+                        fRot = poRefln->fGetField(m_oList.m_nFI_fObsRotMid);
+                        fLambda = 1.0f;
+                        if (bTOFLaue) {
+                            fRot = 0.0f;
+                            if (0 <= nFI_Wave)
+                                fLambda = poRefln->fGetField(nFI_Wave);
+                            if (0.0f >= fLambda)
+                                fLambda = 1.0f;
+                            oDetector.m_poSpatial->vSetParallaxWavelength(fLambda);
+                        }
+                        nStat = oDetector.m_poSpatial->nPixeltoMM(f1PX, f2PX, &f1MM, &f2MM, &f3MM);
+                        vConvRotVec3DMat3D(-fRot, fRotVec, &fInvRot[0][0]);
                         fVDCO[0] = f1MM;
                         fVDCO[1] = f2MM;
                         fVDCO[2] = f3MM;
                         vMulMat3DVec3D(fDD, fVDCO, fTS);
                         (void) fNormVec3D(fTS);
                         vAddVec3DVec3D(a3fS0, fTS, fXR);
-                        
+                        if (bTOFLaue)
+                            vMulVec3DScalar(fXR, 1.0f / fLambda, fXR);
+
                         vMulMat3DVec3D(fInvRot, fXR, fTS);      // fTS is a temp var here
                         vMulMat3DVec3D(fInvGonMatrix, fTS, fX); // fTS is a temp var here                
                         
@@ -2190,6 +2215,12 @@ bool CEyeballIndex::bRefineBeam(double fRejectFraction,
                         vMulVec3DScalar(fRotVec,fDot3D(fX,fRotVec),a3fTemp1);
                         vSubVec3DVec3D(fX,a3fTemp1,a3fTemp1);
                         vCross3D(fRotVec,a3fTemp1,a3fTemp2);
+                        if (bTOFLaue) {
+                            // As in Creflnlist::nCalcRecipLatticePoints: the
+                            // uncertain direction is along X itself.
+                            vCopyVec3D(fX, a3fTemp2);
+                            (void) fNormVec3D(a3fTemp2);
+                        }
                         poRefln->vSetField(m_oList.m_nFI_fRecipCoordD0, a3fTemp2[0]);
                         poRefln->vSetField(m_oList.m_nFI_fRecipCoordD1, a3fTemp2[1]);
                         poRefln->vSetField(m_oList.m_nFI_fRecipCoordD2, a3fTemp2[2]);

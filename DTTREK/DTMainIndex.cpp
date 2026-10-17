@@ -454,7 +454,26 @@ int CDTMainIndex::nExecute(unsigned int argc, char* argv[])
               DTREK_ERROR(5, sMissingOption);
             }
         }
-      else if ("-sharpness" == sTemp) 
+      else if ("-threshold" == sTemp)
+        {
+          // Minimum intensity of spots used for indexing (as in the
+          // original PCS TOF-Laue d*TREK)
+          i++;
+          if (i < argc)
+            {
+              nStat = sscanf(argv[i], "%f", &fTemp);
+              if (1 == nStat)
+                fMin = fTemp;
+              else
+                DTREK_ERROR(6, sInvalidArgument);
+              nStat = 0;
+            }
+          else
+            {
+              DTREK_ERROR(5, sMissingOption);
+            }
+        }
+      else if ("-sharpness" == sTemp)
       {
           i++;
           if (i < argc)
@@ -1721,6 +1740,7 @@ void CDTMainIndex::vError(const int nErrorNum, const Cstring& sMessage)
         "                      required for indexing contributors.  If 0.0<fSigma<1.0\n"
         "                      then it specifies the fraction of the input list\n"
         "                      reflections to use.\n\n"
+        " -threshold fMinI     Minimum intensity of spots used for indexing.\n\n"
         " -nodeice             Prevents deletion of spots in resolution rings close\n"
         "                      to the resolution of the powder rings of hexagonal ice.\n"
         "                      Default: delete spots thought to be in ice rings.\n\n"

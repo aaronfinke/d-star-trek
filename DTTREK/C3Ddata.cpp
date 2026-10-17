@@ -154,6 +154,7 @@ void C3DdataInput::vInit() {
   m_bSpotChase             = TRUE;
   m_bUsePerSliceBackground = TRUE;
   m_bProfileFitWeak		   = FALSE;
+  m_bSumWeakWithoutProfit  = FALSE;
   m_bIncludeSat            = FALSE;
   m_fMinProfitPeakIntensity = 0.0;
   m_a3nHKL[0]              = -999;
@@ -2701,11 +2702,12 @@ int C3Ddata::nCalcMask(const float a3fAbsCentroid[3],const float fRotWidth)
           {
             if (afSliceIntensity[nSlice]!=0.0)
               {
-                if (((int) afSliceStatus[nSlice]) & ms_nPerSliceIntegrateWeak)
+                if (   (((int) afSliceStatus[nSlice]) & ms_nPerSliceIntegrateWeak)
+                    && !(m_bSumWeakWithoutProfit && (0.0 >= afSliceSigmaProfit[nSlice])) )
                   {
                     m_fPeakIntensity +=afSliceIntensityProfit[nSlice];
                     m_fPeakIntensitySigma += afSliceSigmaProfit[nSlice]*afSliceSigmaProfit[nSlice];
-                  } 
+                  }
                 else if ((afSliceIntensityProfit[nSlice]==0.0) || (afSliceSigmaProfit[nSlice]>afSliceSigma[nSlice]))
                   {
                     m_fPeakIntensity +=afSliceIntensity[nSlice];
