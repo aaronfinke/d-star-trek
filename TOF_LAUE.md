@@ -1,4 +1,11 @@
-# Neutron TOF-Laue data from the LANSCE PCS
+# Neutron TOF-Laue data
+
+This version of d\*TREK processes neutron time-of-flight (TOF) Laue data of
+the LANSCE PCS (cylindrical detector, the rest of this section) and of panel
+instruments such as SNS MANDI (event data or NXlauetof histograms, see
+[Panel instruments](#panel-instruments-sns-mandi-nxlauetof)).
+
+## LANSCE PCS
 
 This version of d\*TREK processes the wavelength-resolved time-of-flight (TOF)
 Laue data of the Protein Crystallography Station (PCS) at LANSCE, as the lost
@@ -11,9 +18,13 @@ programs; dtdisplay and dtprocess are unchanged.
 
 The TOF-Laue code paths run only for headers that describe TOF-Laue data
 (`Detector1_ROTATION_ARRAY` and `Detector1_ROTATION_L1`). X-ray processing is
-unchanged: dtfind and dtindex give identical results on X-ray images.
+unchanged: dtfind and dtindex give identical results on X-ray images. The one
+change that affects X-ray refinement is a bug fix: `dtrefine -CrysConstraints`
+(an unconstrained cell for a non-triclinic space group) used the cell
+derivatives of the constrained cell, so it converged slowly or to a wrong
+cell, and printed the b and c values as their sigmas.
 
-## Data files
+### Data files
 
 A PCS run is one NeXus file. It holds eight detector segments of
 96 TOF channels × 256 × 256 pixels, plus the TOF bin edges. The original
@@ -32,7 +43,7 @@ lists hold TOF channels.
 one channel, the sum, or the maximum ("overlay") of a range of channels as an
 ordinary image, for viewing.
 
-## Processing one run
+### Processing one run
 
 `scripts/pcs_process_run.sh` runs the steps of `laue_process.txt`:
 
@@ -69,7 +80,7 @@ Header keywords added to the legacy set: `TOF_WAVELENGTH_RANGE`,
 default 2 0 0.5, as the original program used), `Detector1_SPATIAL_PARALLAX`,
 `DTREFINE_RMS_CHAN`.
 
-## Merging a data set
+### Merging a data set
 
     scripts/pcs_merge.sh -head R000466refine.head -o merged -wave "0.6 6.3" R*/R*i.ref
 
@@ -84,7 +95,7 @@ run LAUENORM. `dtref2afout` writes the same files as the legacy
 use an I/σ limit of about 2 for LAUENORM's scale factors instead of the 7 in
 the legacy `laue.dat`.
 
-## Model and conventions
+### Model and conventions
 
 - **Wavelength.** λ = (t(c) + delay) / (252.7784 µs m⁻¹ Å⁻¹ · (L1 + L2)).
   - t(c) is interpolated linearly between the TOF bin edges.
@@ -100,14 +111,14 @@ the legacy `laue.dat`.
   This integrates noticeably better than the rotation-image shoebox method (`-tofint shoebox`) and than the original program (merging statistics below).
 - **Indexing and refinement.** These use reciprocal vectors X = (S + S0)/λ_obs. The radial (wavelength) part of the residual is down-weighted, and the residuals are reported in mm and in TOF channels.
 
-## Differences from the original program
+### Differences from the original program
 
 - **Intensity scale.** Integrated intensities are about 1100× smaller than the original program's (whose `-type 204` scaling is unknown), and dtfind intensities about 8× smaller. The legacy recipe thresholds (`dtindex -threshold 1000–4000`, `dtrefine -threshold 100`) therefore become about 100 and 10. LAUENORM rescales its input, so the scale doesn't matter there.
 - **Sigmas.** The original program's sigmas are about 3.5× too small: its I/σ is inflated. The sigmas here are close to counting statistics. A legacy recipe's `-sigma 4` in dtfind therefore corresponds to about 1σ here.
 - **Predicted channels.** These follow the cylinder flight path. The original predictions were up to about 0.4 channel later at the ends of the detector arc. Its observed wavelengths, however, used the cylinder path.
 - **A legacy data-set error.** In the Crambin set, `R000588refine.head` points to `R000589.nx.hdf`, so the legacy "R000588" list is a second integration of R000589.
 
-## Validation against the original outputs
+### Validation against the original outputs
 
 | Check | Result |
 |---|---|
@@ -123,9 +134,120 @@ the legacy `laue.dat`.
 | dtlauenorm on identical reflections | R 0.173 here vs 0.217 for the legacy lists. |
 | X-ray regression (insulin, ADSC) | dtfind identical; dtindex same cell and orientation. |
 
-## Not done
+### Not done
 
 - Refinement of L1 (only the TOF delay is refinable).
 - A physical depth model for the parallax. The legacy correction (vertical scale 1.006472 + 0.001257λ) is used.
 - Automatic peak radius from the strong spots, and exclusion of neighbouring spots from the background annulus in the summation integration.
 - Absorption and extinction corrections.
+
+## Panel instruments (SNS MANDI, NXlauetof)
+
+d\*TREK also reads TOF-Laue histograms of instruments with many flat
+detector panels, in the NXlauetof layout of the ESS NMX reduced data, and
+histograms SNS event data into that layout. Tested on SNS MANDI (CuZnSOD,
+IPTS-37773, 10 runs, 40 panels of 256 × 256 pixels).
+
+### Data files
+
+- **NXlauetof** (`/entry/definition` = `NXlauetof`). One `NXdetector` per
+  panel under `/entry/instrument`, with `data` (y, x, tof and an `axes`
+  attribute), `origin` (centre of the first pixel), `fast_axis` and
+  `slow_axis`, `x_pixel_size`, `y_pixel_size` and the TOF bin edges
+  (`original_time_edges`, or `time_of_flight` centres). L1 is
+  `/entry/instrument/source/distance`; the goniometer is the
+  `depends_on` chain of `/entry/sample/transformations` (default: Mantid's
+  omega, chi, phi). All panels must share the TOF bins.
+
+  The panels are stacked along px1 into one mosaic image per TOF channel,
+  separated by 8 masked rows; px0 is the panel's x index. The header gets
+  `Detector1_SPATIAL_DISTORTION_TYPE=Panels_spatial`,
+  `Detector1_PANELS_NUMBER` and one `Detector1_PANEL_k = bank start nx ny
+  ox oy oz ux uy uz vx vy vz du dv` per panel (mm, d\*TREK laboratory frame).
+  The detector goniometer is the identity, so the "mm" coordinates of a pixel
+  are its laboratory position. `TOF_WIDTH_MODEL` defaults to
+  `1 0 0.0075/r` for logarithmic bins of ratio r (1 0 1.5 for 0.5% bins).
+
+- **SNS event NeXus** (`MANDI_*.nxs.h5`). `dteventbin` histograms the events
+  in C++ (MANDI: 83 million events in 13 s, 70 MB output):
+
+      dteventbin MANDI_13378.nxs.h5 -detcal calibration.DetCal \
+                 -goniocal calibration_goniometer.xml [-out file] \
+                 [-logbin 0.005 | -linbin dt] [-tof tmin tmax] [-bin n] \
+                 [-gonio omega chi phi] [-banks 1,2,...]
+
+  Panel geometry comes from the Mantid instrument definition in the file,
+  or from an ISAW/Mantid `.DetCal` calibration (L1, T0 and panel positions)
+  if one is given. The goniometer angles are time averages of the DAS logs.
+  The goniometer calibration (chi offset, tilt) is recorded in the output but
+  not applied; per-run refinement absorbs it.
+
+- **`dtisawub UB.mat in.head out.head`** puts a Mantid/ISAW UB matrix into a
+  header (for checks against Mantid).
+
+### Processing and merging
+
+    scripts/lauetof_process_run.sh -o r13378 -cell "65.73 65.73 151.88 90 90 120" -sg 179 \
+        -detcal 2026B/calibration.DetCal -goniocal 2026B/calibration_goniometer.xml \
+        MANDI_13378.nxs.h5
+
+runs `dteventbin` (for event files), `dtfind` over all channels and the whole
+mosaic, `dtindex -known -fourier`, three `dtrefine` stages and `dtintegrate
+-tofradius 5`, and writes the LAUENORM input with `dtref2afout -scale auto
+-theta`. About 40 s per MANDI run. The last refinement stage refines an
+unconstrained cell (`+CrysAll -CrysConstraints`), as Mantid refines an
+unconstrained UB: it absorbs small systematic errors of the panel geometry and
+places the predictions on the outer panels, which have few found spots,
+2–5 px better.
+
+To merge with LAUENORM, using for example the control file that Mantid's
+`mandi_createmtz.py` writes:
+
+    scripts/lauetof_lauenorm.sh -o merged -setup ~/Daresbury_laue/laue-setup.sh \
+        -out merged.mtz lnorm_all_merged.dat r*/MANDI_*i.ref
+
+or natively, `scripts/pcs_merge.sh -head r13378/r2.head ...` (`r2.head` has
+the space-group-constrained cell).
+
+In dtrefine, the mm residuals and the `-rej` limits of a panel detector are
+along the axes of the panel of the predicted spot.
+
+### Validation against Mantid (MANDI CuZnSOD)
+
+| Check | Result |
+|---|---|
+| `dteventbin` vs an independent histogram | Identical counts (banks 1 and 52); panel origins match the DetCal to < 1 µm. |
+| Geometry vs Mantid | L2 rms 3 µm, scattering angles to 1e-5 rad, λ to 1e-4 Å. |
+| Prediction with Mantid's UB (`dtisawub`) | 13017 predicted vs 13110 Mantid peaks; positions rms 0.29 px, TOF 0.001%. |
+| Integration with Mantid's UB | CC 0.958 vs Mantid profile-fitted intensities (I/σ > 3, 3053 reflections). |
+| Own pipeline, per run (`lauetof_process_run.sh`) | CC 0.900–0.966 vs Mantid (I/σ > 3; 2257–3952 reflections per run, matched by position). Refinement 0.77–0.89 mm, 0.61–0.82 channel. See below. |
+| Merged, LAUENORM with Mantid's control file (9 runs, as Mantid) | CC(F²) 0.961 vs Mantid's merged MTZ (6573 reflections; 0.98 to 3.7 Å, 0.32 at 2.5–2.7 Å). RFACT1 0.172 vs Mantid's 0.214, on fewer accepted measurements (39 876 vs 62 267). |
+| Merged natively (`pcs_merge.sh`, 9 runs) | CC 0.943 vs Mantid (7191 reflections; 0.52 at 2.5–2.7 Å). |
+
+Per run (CC with Mantid's profile-fitted intensities for Mantid I/σ > 3):
+
+| Run | Spots found | Refinement mm / channel | Integrated | CC (n) |
+|---|---|---|---|---|
+| 13378 | 405 | 0.89 / 0.82 | 12131 | 0.964 (2895) |
+| 13379 | 427 | 0.82 / 0.80 | 12093 | 0.941 (3206) |
+| 13380 | 486 | 0.81 / 0.75 | 12042 | 0.945 (3276) |
+| 13382 | 429 | 0.88 / 0.74 | 12096 | 0.947 (2257) |
+| 13383 | 512 | 0.84 / 0.69 | 12082 | 0.930 (3388) |
+| 13384 | 622 | 0.82 / 0.61 | 12082 | 0.943 (3664) |
+| 13385 | 710 | 0.80 / 0.74 | 12022 | 0.900 (3933) |
+| 13386 | 683 | 0.77 / 0.64 | 12017 | 0.966 (3952) |
+| 13387 | 657 | 0.81 / 0.72 | 12098 | 0.963 (3931) |
+| 13388 | 636 | 0.83 / 0.71 | 12134 | 0.962 (3632) |
+
+Our predictions and Mantid's agree to about 1 px (median) on most runs. In
+run 13382 they differ by 2–4 px on the outer panels, which have almost no
+found spots. There our predictions fit the found spots better (1.5 px rms)
+than Mantid's peak positions do, so only 7965 of its reflections fall within
+the 2.5 px matching window.
+
+### Not done (panel instruments)
+
+- The goniometer calibration is recorded, not applied. Each run's orientation is refined on its own, which absorbs it.
+- No per-panel geometry refinement. The unconstrained cell absorbs small systematic errors.
+- Weak reflections: summation integration gives a lower I/σ than Mantid's profile fitting, so LAUENORM rejects more of them (I < 1.5σ).
+- Reflections on panel edges and in the gaps between panels are rejected.

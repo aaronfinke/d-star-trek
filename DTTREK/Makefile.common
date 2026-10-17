@@ -1199,6 +1199,10 @@ nexuspcs.o:	nexuspcs.cpp nexuspcs.h CTOFLaue.h
 
 CTOFLaue.o:	CTOFLaue.cpp CTOFLaue.h
 
+h5util.o:	h5util.cpp h5util.h
+
+nxevents.o:	nxevents.cpp nxevents.h h5util.h
+
 CLaueNorm.o:	CLaueNorm.cpp CLaueNorm.h Creflnlist.h Cspacegroup.h dtsvd.h
 
 marip.o:	marip.cpp marip.h
@@ -1363,6 +1367,20 @@ dtlauenorm:	dtlauenorm.o Cscan.o Cimage.o CGonioMask.o CGonioShadow.o Cstring.o 
 tCTOFLaue.o:	tCTOFLaue.cpp CTOFLaue.h Cdetector.h Creflnlist.h
 
 tCTOFLaue:	tCTOFLaue.o Cscan.o Cimage.o CGonioMask.o CGonioShadow.o Cstring.o Crotation.o \
+		Cimage_header.o Cnonunf.o CImageWait.o ImagePool.o BitmapRLE.o C3Ddata.o CScanBitmap.o Cprofit2D.o CinterpMesh.o CSphericalHarmonic.o Cstat.o Crefln.o \
+		Creflnlist.o ResoBins.o Ccrystal.o Cspacegroup.o Cdetector.o Csource.o \
+		Cgoniometer.o Cspatial.o Cwavelength.o dtsvd.o dtarray.o \
+		dtreklogic.o dskio.o dtrekvec.o dtreksys.o $(MSCOBJS)
+		$(CC) -o $@ $^  $(CCFLAGS) $(GLIBDIR) $(LIBS)
+
+dteventbin.o:	dteventbin.cpp nxevents.h
+
+dteventbin:	dteventbin.o nxevents.o h5util.o
+		$(CC) -o $@ $^  $(CCFLAGS) $(GLIBDIR) $(LIBS)
+
+dtisawub.o:	dtisawub.cpp Ccrystal.h Cimage_header.h
+
+dtisawub:	dtisawub.o Cscan.o Cimage.o CGonioMask.o CGonioShadow.o Cstring.o Crotation.o \
 		Cimage_header.o Cnonunf.o CImageWait.o ImagePool.o BitmapRLE.o C3Ddata.o CScanBitmap.o Cprofit2D.o CinterpMesh.o CSphericalHarmonic.o Cstat.o Crefln.o \
 		Creflnlist.o ResoBins.o Ccrystal.o Cspacegroup.o Cdetector.o Csource.o \
 		Cgoniometer.o Cspatial.o Cwavelength.o dtsvd.o dtarray.o \

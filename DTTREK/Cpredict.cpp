@@ -1255,7 +1255,10 @@ int Cpredict::nCalcDetCoords(void)
 
   // Added to make sure that 'ghost reflections' don't get predicted.  This was a problem
   // with large 2theta angle experiments.
-  if ((m_ppoDetector[m_nWhichDetector]->m_poSpatial->eSpatialType()==eSpatial_flat_geometry) && (fXRdotDN < m_fS0dotDN))
+  // (Not for a multi-panel detector, whose panels surround the crystal.)
+  if (   (m_ppoDetector[m_nWhichDetector]->m_poSpatial->eSpatialType()==eSpatial_flat_geometry)
+      && !m_ppoDetector[m_nWhichDetector]->m_poSpatial->bIsPanels()
+      && (fXRdotDN < m_fS0dotDN))
     return  1;
 
   vSubVec3DVec3D(m_afXR, m_afS0, m_afXRminusS0);   // Also used by oblique incidence calc

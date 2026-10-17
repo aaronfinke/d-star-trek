@@ -6,15 +6,17 @@
 //
 //       h k l lambda 0 scale*I scale*sigma     (%5d%5d%5d%10.5f%10.5f%10d%10d)
 //
-//    with negative intensities written as 0.  Unlike negative.awk, which
+//    with negative intensities written as 0.  With -theta the fifth column
+//    is the Bragg angle theta (radians) instead of 0, as in the files that
+//    Mantid's SaveLauenorm writes (LAUENORM uses it for per-pack B factors).  Unlike negative.awk, which
 //    used fixed column numbers, the columns are found by field name, so the
 //    lists of this d*TREK (which have an embedded header) work as well.
 //    The numbers are converted from the text of the .ref file exactly as
 //    awk does, so the output for a legacy list is identical to the legacy
 //    .afout file.
 //
-//    Usage: dtref2afout [-scale f|auto] [-keepneg] [-wavefield name] [-out file]
-//                       file1.ref [file2.ref ...]
+//    Usage: dtref2afout [-scale f|auto] [-keepneg] [-theta] [-wavefield name]
+//                       [-out file] file1.ref [file2.ref ...]
 //
 //    The intensities of this d*TREK are about 1000 times smaller than those
 //    of the original PCS d*TREK (whose -type 204 scale is not known), so the
@@ -43,8 +45,8 @@ using std::vector;
 static void
 vUsage(void)
 {
-  cout << "\nUsage: dtref2afout [-scale f|auto] [-keepneg] [-wavefield name] [-out file]\n"
-       << "                   file1.ref [file2.ref ...]\n\n"
+  cout << "\nUsage: dtref2afout [-scale f|auto] [-keepneg] [-theta] [-wavefield name]\n"
+       << "                   [-out file] file1.ref [file2.ref ...]\n\n"
        << "  Writes the LAUENORM input file of each TOF-Laue reflection list:\n"
        << "     h k l lambda 0 scale*I scale*sigma\n"
        << "  as the negative.awk script of the original PCS workflow did.\n\n"
@@ -54,6 +56,8 @@ vUsage(void)
        << "                  (use it for lists of this d*TREK, whose intensities are\n"
        << "                  about 1000x smaller than those of the original one).\n"
        << "  -keepneg        Write negative intensities (default: write them as 0).\n"
+       << "  -theta          Write theta = asin(lambda / 2d) (radians, d from\n"
+       << "                  fResolution) in the fifth column instead of 0.\n"
        << "  -wavefield name Field with the wavelength (default fCalwavelength).\n"
        << "  -out file       Output file; only with a single input list.  The default\n"
        << "                  is the input file name with .ref replaced by .afout, in\n"
@@ -79,7 +83,7 @@ llAwkInt(const double dValue)
 
 static int
 nConvert(const string& rsIn, const string& rsOut, const double dScale,
-         const bool bKeepNeg, const string& rsWaveField)
+         const bool bKeepNeg, const bool bTheta, const string& rsWaveField)
 {
   std::ifstream oIn(rsIn.c_str());
   if (!oIn)
@@ -131,6 +135,7 @@ nConvert(const string& rsIn, const string& rsOut, const double dScale,
   int nFI = nFindField(vsNames, "fIntensity");
   int nFS = nFindField(vsNames, "fSigmaI");
   int nFW = nFindField(vsNames, rsWaveField);
+  int nFD = nFindField(vsNames, "fResolution");
   if ( (0 > nFH) || (0 > nFK) || (0 > nFL) || (0 > nFI) || (0 > nFS) )
     {
       cout << "ERROR: " << rsIn << " lacks nH, nK, nL, fIntensity or fSigmaI\n" << flush;
@@ -140,6 +145,11 @@ nConvert(const string& rsIn, const string& rsOut, const double dScale,
     {
       cout << "ERROR: " << rsIn << " has no field " << rsWaveField
            << " (not a TOF-Laue dtintegrate list?)\n" << flush;
+      return (3);
+    }
+  if (bTheta && (0 > nFD))
+    {
+      cout << "ERROR: " << rsIn << " has no field fResolution, needed by -theta\n" << flush;
       return (3);
     }
 
@@ -188,11 +198,19 @@ nConvert(const string& rsIn, const string& rsOut, const double dScale,
         llI = llAwkInt(dI * dUseScale);
       if (100 > llAwkInt(dS * dUseScale))
         nNumTiny++;
+      double dLambda = strtod(rvsTok[nFW].c_str(), NULL);
+      double dTheta  = 0.0;
+      if (bTheta)
+        {
+          double dD = strtod(rvsTok[nFD].c_str(), NULL);
+          if ( (0.0 < dD) && (dLambda < 2.0 * dD) )
+            dTheta = asin(dLambda / (2.0 * dD));
+        }
       fprintf(pFOut, "%5ld%5ld%5ld%10.5f%10.5f%10lld%10lld\n",
               strtol(rvsTok[nFH].c_str(), NULL, 10),
               strtol(rvsTok[nFK].c_str(), NULL, 10),
               strtol(rvsTok[nFL].c_str(), NULL, 10),
-              strtod(rvsTok[nFW].c_str(), NULL), 0.0,
+              dLambda, dTheta,
               llI, llAwkInt(dS * dUseScale));
       nNumOut++;
     }
@@ -210,6 +228,7 @@ main(int argc, char *argv[])
 {
   double         dScale     = 10.0;
   bool           bKeepNeg   = false;
+  bool           bTheta     = false;
   string         sWaveField = "fCalwavelength";
   string         sOut       = "";
   vector<string> vsIn;
@@ -229,6 +248,8 @@ main(int argc, char *argv[])
         }
       else if ("-keepneg" == sArg)
         bKeepNeg = true;
+      else if ("-theta" == sArg)
+        bTheta = true;
       else if ( ("-wavefield" == sArg) && (i + 1 < argc) )
         sWaveField = argv[++i];
       else if ( ("-out" == sArg) && (i + 1 < argc) )
@@ -274,7 +295,7 @@ main(int argc, char *argv[])
             sBase = sBase.substr(0, nLen - 4);
           sThisOut = sBase + ".afout";
         }
-      if (0 != nConvert(vsIn[i], sThisOut, dScale, bKeepNeg, sWaveField))
+      if (0 != nConvert(vsIn[i], sThisOut, dScale, bKeepNeg, bTheta, sWaveField))
         nStat = 1;
     }
   return (nStat);

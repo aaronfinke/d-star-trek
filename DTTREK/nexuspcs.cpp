@@ -16,6 +16,7 @@
 #include "dtreksys.h"
 #include "nexuspcs.h"
 #include "CTOFLaue.h"
+#include "h5util.h"
 
 #if !defined(VC6)
 using std::cout;
@@ -594,6 +595,10 @@ CPCSVolume::vClear(void)
   m_sEndTime       = "";
   m_sComment       = "";
   m_dMicroAmpHours = 0.0;
+  m_bPanels        = false;
+  m_vPanels.clear();
+  m_dTOFBinRatio   = 0.0;
+  m_sInstrument    = "";
 }
 
 int
@@ -626,6 +631,29 @@ CPCSVolume::nLoad(const Cstring& rsFilename)
            << " as an HDF5 file.\n" << flush;
       return (1);
     }
+
+  // NXlauetof histograms (multi-panel detectors, e.g. SNS MANDI, ESS NMX)
+
+  {
+    std::string sDef, sClass;
+    (void) h5u::nReadString(hFile, "/entry/definition", &sDef);
+    (void) h5u::nReadAttrString(hFile, "/entry", "NX_class", &sClass);
+    if ( ("NXlauetof" == sDef) || ("NXlauetof" == sClass) )
+      {
+        int nStat = nLoadLauetof((long long) hFile, rsFilename);
+        H5Fclose(hFile);
+        if ( (0 == nStat) && (0 != nApplyResponse()) )
+          nStat = 8;
+        if (0 != nStat)
+          {
+            vClear();
+            return (nStat);
+          }
+        m_sFilename = rsFilename;
+        m_lFileTime = lModTime;
+        return (0);
+      }
+  }
 
   // Find the run_N group
 
@@ -839,6 +867,442 @@ CPCSVolume::nLoad(const Cstring& rsFilename)
   return (0);
 }
 
+// Read an NXlauetof file: one (y, x, TOF) histogram per flat detector panel
+// (entry/instrument/<panel>, NXdetector), the panel geometry (origin = first
+// pixel centre, fast_axis/slow_axis with their "dim", pixel sizes), the TOF
+// bins, L1 (entry/instrument/source/distance) and the goniometer
+// (entry/sample/transformations).  Positions are in the NeXus frame.
+
+namespace {
+
+double
+dLengthScale(const std::string& rsUnits)
+{
+  if ( ("mm" == rsUnits) || ("millimetre" == rsUnits) || ("millimeter" == rsUnits) )
+    return (0.001);
+  if ( ("cm" == rsUnits) || ("centimetre" == rsUnits) || ("centimeter" == rsUnits) )
+    return (0.01);
+  return (1.0);    // metres
+}
+
+double
+dTimeScaleToMicro(const std::string& rsUnits)
+{
+  if ( ("ns" == rsUnits) || ("nanosecond" == rsUnits) )
+    return (0.001);
+  if ( ("ms" == rsUnits) || ("millisecond" == rsUnits) )
+    return (1000.0);
+  if ( ("s" == rsUnits) || ("second" == rsUnits) )
+    return (1.0e6);
+  return (1.0);    // microseconds
+}
+
+// NeXus (z along the beam, y up) to the d*TREK laboratory frame (Z towards
+// the source, Y up): a rotation by 180 degrees about y.
+void
+vNeXusToDtrek(const double a3dIn[3], double a3dOut[3])
+{
+  a3dOut[0] = -a3dIn[0];
+  a3dOut[1] =  a3dIn[1];
+  a3dOut[2] = -a3dIn[2];
+}
+
+}  // end of anonymous namespace
+
+int
+CPCSVolume::nLoadLauetof(long long llFile, const Cstring& rsFilename)
+{
+  hid_t hFile = (hid_t) llFile;
+
+  struct tIn
+  {
+    std::string sPath;
+    int         nBank;
+    int         a3nDimOf[3];     // data dimension holding y, x, TOF
+    hsize_t     a3nDims[3];
+    double      a3dOrigin[3], a3dX[3], a3dY[3];
+    double      dX, dY;
+  };
+  std::vector<tIn>          vIn;
+  std::vector<std::string>  vsNames;
+  std::vector<double>       vdEdges;
+
+  (void) h5u::nListGroup(hFile, "/entry/instrument", vsNames);
+  for (size_t n = 0; n < vsNames.size(); n++)
+    {
+      std::string sPath = "/entry/instrument/" + vsNames[n];
+      std::string sClass;
+      (void) h5u::nReadAttrString(hFile, sPath, "NX_class", &sClass);
+      std::vector<hsize_t> vnDims;
+      if (   ("NXdetector" != sClass)
+          || (0 != h5u::nGetDims(hFile, sPath + "/data", vnDims)) || (3 != vnDims.size()) )
+        continue;
+
+      tIn oIn;
+      oIn.sPath = sPath;
+      std::vector<double> vdTemp;
+      if (0 == h5u::nReadAttrDoubles(hFile, sPath, "bank_number", vdTemp))
+        oIn.nBank = (int) vdTemp[0];
+      else
+        {
+          size_t i = vsNames[n].find_first_of("0123456789");
+          oIn.nBank = (std::string::npos == i) ? (int) n + 1 : atoi(vsNames[n].c_str() + i);
+        }
+
+      // Which data dimension is y, x and TOF
+      std::vector<std::string> vsAxes;
+      oIn.a3nDimOf[0] = 0;
+      oIn.a3nDimOf[1] = 1;
+      oIn.a3nDimOf[2] = 2;
+      if (   (0 == h5u::nReadAttrStrings(hFile, sPath + "/data", "axes", vsAxes))
+          && (3 == vsAxes.size()) )
+        for (int d = 0; d < 3; d++)
+          {
+            if ("y_pixel_offset" == vsAxes[d])
+              oIn.a3nDimOf[0] = d;
+            else if ("x_pixel_offset" == vsAxes[d])
+              oIn.a3nDimOf[1] = d;
+            else if ( ("tof" == vsAxes[d]) || ("time_of_flight" == vsAxes[d]) || ("t" == vsAxes[d]) )
+              oIn.a3nDimOf[2] = d;
+          }
+      for (int d = 0; d < 3; d++)
+        oIn.a3nDims[d] = vnDims[oIn.a3nDimOf[d]];
+
+      // Geometry
+      std::string sUnits;
+      if (0 != h5u::nReadDoubles(hFile, sPath + "/origin", vdTemp))
+        (void) h5u::nReadAttrDoubles(hFile, sPath + "/origin", "first_pixel_position", vdTemp);
+      if (3 != vdTemp.size())
+        {
+          cout << "WARNING: " << sPath << " has no origin; skipped.\n" << flush;
+          continue;
+        }
+      (void) h5u::nReadAttrString(hFile, sPath + "/origin", "units", &sUnits);
+      for (int k = 0; k < 3; k++)
+        oIn.a3dOrigin[k] = vdTemp[k] * dLengthScale(sUnits);
+
+      std::vector<double> vdFast, vdSlow;
+      std::string sFastDim = "y_pixel_offset", sSlowDim = "x_pixel_offset", sTemp;
+      if (   (0 != h5u::nReadDoubles(hFile, sPath + "/fast_axis", vdFast))
+          || (0 != h5u::nReadDoubles(hFile, sPath + "/slow_axis", vdSlow))
+          || (3 != vdFast.size()) || (3 != vdSlow.size()) )
+        {
+          cout << "WARNING: " << sPath << " has no fast_axis/slow_axis; skipped.\n" << flush;
+          continue;
+        }
+      if (0 == h5u::nReadAttrString(hFile, sPath + "/fast_axis", "dim", &sTemp))
+        sFastDim = sTemp;
+      if (0 == h5u::nReadAttrString(hFile, sPath + "/slow_axis", "dim", &sTemp))
+        sSlowDim = sTemp;
+      const std::vector<double>& rvdX = ("x_pixel_offset" == sFastDim) ? vdFast : vdSlow;
+      const std::vector<double>& rvdY = ("x_pixel_offset" == sFastDim) ? vdSlow : vdFast;
+      double dLx = sqrt(rvdX[0]*rvdX[0] + rvdX[1]*rvdX[1] + rvdX[2]*rvdX[2]);
+      double dLy = sqrt(rvdY[0]*rvdY[0] + rvdY[1]*rvdY[1] + rvdY[2]*rvdY[2]);
+      for (int k = 0; k < 3; k++)
+        {
+          oIn.a3dX[k] = rvdX[k] / dLx;
+          oIn.a3dY[k] = rvdY[k] / dLy;
+        }
+      if (   (0 != h5u::nReadDouble(hFile, sPath + "/x_pixel_size", &oIn.dX))
+          || (0 != h5u::nReadDouble(hFile, sPath + "/y_pixel_size", &oIn.dY)) )
+        {
+          cout << "WARNING: " << sPath << " has no pixel sizes; skipped.\n" << flush;
+          continue;
+        }
+      (void) h5u::nReadAttrString(hFile, sPath + "/x_pixel_size", "units", &sUnits);
+      oIn.dX *= dLengthScale(sUnits);
+      (void) h5u::nReadAttrString(hFile, sPath + "/y_pixel_size", "units", &sUnits);
+      oIn.dY *= dLengthScale(sUnits);
+
+      // TOF bin edges (the same for all panels)
+      std::vector<double> vdE;
+      std::string sTUnits;
+      if (0 == h5u::nReadDoubles(hFile, sPath + "/original_time_edges", vdE))
+        (void) h5u::nReadAttrString(hFile, sPath + "/original_time_edges", "units", &sTUnits);
+      else if (0 == h5u::nReadDoubles(hFile, sPath + "/time_of_flight", vdTemp))
+        {
+          (void) h5u::nReadAttrString(hFile, sPath + "/time_of_flight", "units", &sTUnits);
+          if (vdTemp.size() == oIn.a3nDims[2] + 1)
+            vdE = vdTemp;
+          else if ( (vdTemp.size() == oIn.a3nDims[2]) && (2 <= vdTemp.size()) )
+            {
+              vdE.push_back(1.5 * vdTemp[0] - 0.5 * vdTemp[1]);
+              for (size_t i = 0; i + 1 < vdTemp.size(); i++)
+                vdE.push_back(0.5 * (vdTemp[i] + vdTemp[i + 1]));
+              vdE.push_back(1.5 * vdTemp.back() - 0.5 * vdTemp[vdTemp.size() - 2]);
+            }
+        }
+      if (vdE.size() != oIn.a3nDims[2] + 1)
+        {
+          cout << "WARNING: " << sPath << " has no usable TOF bins; skipped.\n" << flush;
+          continue;
+        }
+      for (size_t i = 0; i < vdE.size(); i++)
+        vdE[i] *= dTimeScaleToMicro(sTUnits);
+      if (vdEdges.empty())
+        vdEdges = vdE;
+      else if (   (vdEdges.size() != vdE.size())
+               || (1.0e-6 * vdEdges.back() < fabs(vdEdges.back() - vdE.back())) )
+        {
+          cout << "WARNING: " << sPath << " has different TOF bins; skipped.\n" << flush;
+          continue;
+        }
+      vIn.push_back(oIn);
+    }
+  if (vIn.empty())
+    {
+      cout << "ERROR in CPCSVolume: no usable detector panels in " << rsFilename << ".\n" << flush;
+      return (2);
+    }
+
+  // Panels in bank order
+  for (size_t i = 1; i < vIn.size(); i++)
+    for (size_t j = i; (0 < j) && (vIn[j - 1].nBank > vIn[j].nBank); j--)
+      std::swap(vIn[j - 1], vIn[j]);
+
+  // Sample position, L1
+  double a3dSample[3] = {0.0, 0.0, 0.0};
+  {
+    std::vector<double> vdTemp;
+    std::string sUnits;
+    if (   (0 == h5u::nReadDoubles(hFile, "/entry/sample/position", vdTemp))
+        && (3 == vdTemp.size()) )
+      {
+        (void) h5u::nReadAttrString(hFile, "/entry/sample/position", "units", &sUnits);
+        for (int k = 0; k < 3; k++)
+          a3dSample[k] = vdTemp[k] * dLengthScale(sUnits);
+      }
+    double dL1 = 0.0;
+    if (0 == h5u::nReadDouble(hFile, "/entry/instrument/source/distance", &dL1))
+      {
+        (void) h5u::nReadAttrString(hFile, "/entry/instrument/source/distance", "units", &sUnits);
+        dL1 = fabs(dL1) * dLengthScale(sUnits);
+      }
+    if (0.0 >= dL1)
+      {
+        cout << "ERROR in CPCSVolume: no source distance (L1) in " << rsFilename << ".\n" << flush;
+        return (3);
+      }
+    m_dL1 = 1000.0 * dL1;
+  }
+
+  // Mosaic and data
+
+  const int nT = (int) vdEdges.size() - 1;
+  int nDim0 = 0, nDim1 = 0;
+  for (size_t p = 0; p < vIn.size(); p++)
+    {
+      nDim0 = std::max(nDim0, (int) vIn[p].a3nDims[1]);
+      nDim1 += (int) vIn[p].a3nDims[0] + ( (0 < p) ? nTOF_PANEL_GAP : 0 );
+    }
+  m_nDim0    = nDim0;
+  m_nDim1    = nDim1;
+  m_nNumChan = nT;
+  const size_t nPix = (size_t) nDim0 * nDim1;
+  m_vfData.assign(nPix * nT, -1.0f);   // gaps and missing pixels are bad
+
+  int nStart = 0;
+  std::vector<float> vfBuf;
+  for (size_t p = 0; p < vIn.size(); p++)
+    {
+      const tIn& rIn = vIn[p];
+      if (0 != h5u::nReadFloats(hFile, rIn.sPath + "/data", vfBuf))
+        {
+          cout << "ERROR in CPCSVolume: cannot read " << rIn.sPath << "/data\n" << flush;
+          return (4);
+        }
+      // Strides of y, x and TOF in the file array
+      std::vector<hsize_t> vnDims;
+      (void) h5u::nGetDims(hFile, rIn.sPath + "/data", vnDims);
+      size_t a3nStride[3] = {vnDims[1] * vnDims[2], vnDims[2], 1};
+      size_t nSy = a3nStride[rIn.a3nDimOf[0]], nSx = a3nStride[rIn.a3nDimOf[1]],
+             nSt = a3nStride[rIn.a3nDimOf[2]];
+      const int nNy = (int) rIn.a3nDims[0], nNx = (int) rIn.a3nDims[1];
+      for (int iy = 0; iy < nNy; iy++)
+        for (int ix = 0; ix < nNx; ix++)
+          {
+            const float *pfIn  = &vfBuf[iy * nSy + ix * nSx];
+            float       *pfOut = &m_vfData[(size_t) (nStart + iy) * nDim0 + ix];
+            for (int c = 0; c < nT; c++)
+              pfOut[(size_t) c * nPix] = pfIn[c * nSt];
+          }
+
+      tTOFPanel oP;
+      oP.nBank  = rIn.nBank;
+      oP.nStart = nStart;
+      oP.nNx    = nNx;
+      oP.nNy    = nNy;
+      double a3dRel[3];
+      for (int k = 0; k < 3; k++)
+        a3dRel[k] = 1000.0 * (rIn.a3dOrigin[k] - a3dSample[k]);
+      vNeXusToDtrek(a3dRel, oP.a3dOrigin);
+      vNeXusToDtrek(rIn.a3dX, oP.a3dU);
+      vNeXusToDtrek(rIn.a3dY, oP.a3dV);
+      oP.dDu = 1000.0 * rIn.dX;
+      oP.dDv = 1000.0 * rIn.dY;
+      m_vPanels.push_back(oP);
+      nStart += nNy + nTOF_PANEL_GAP;
+    }
+
+  // TOF bins (us), the median bin ratio
+  m_vdTOFEdges = vdEdges;
+  m_dTimeBin   = 1.0;
+  m_dTimeDelay = 0.0;
+  {
+    std::vector<double> vdR;
+    for (size_t i = 0; i + 1 < vdEdges.size(); i++)
+      if (0.0 < vdEdges[i])
+        vdR.push_back(vdEdges[i + 1] / vdEdges[i] - 1.0);
+    std::sort(vdR.begin(), vdR.end());
+    m_dTOFBinRatio = vdR.empty() ? 0.0 : vdR[vdR.size() / 2];
+  }
+
+  // Goniometer: follow the depends_on chain from the sample (innermost
+  // first), then list the axes outermost first as d*TREK wants.
+  {
+    std::vector<std::string> vsChain;
+    std::string sNext;
+    (void) h5u::nReadString(hFile, "/entry/sample/depends_on", &sNext);
+    for (int nGuard = 0; (nGuard < 10) && ("" != sNext) && ("." != sNext); nGuard++)
+      {
+        if ('/' != sNext[0])
+          sNext = "/entry/sample/transformations/" + sNext;
+        if (!h5u::bPathExists(hFile, sNext))
+          break;
+        vsChain.push_back(sNext);
+        std::string sDep;
+        (void) h5u::nReadAttrString(hFile, sNext, "depends_on", &sDep);
+        sNext = sDep;
+      }
+    m_vsCrysGonioNames.clear();
+    m_vdCrysGonioValues.clear();
+    m_vdCrysGonioVectors.clear();
+    for (int i = (int) vsChain.size() - 1; i >= 0; i--)
+      {
+        std::string sType;
+        (void) h5u::nReadAttrString(hFile, vsChain[i], "transformation_type", &sType);
+        if ("rotation" != sType)
+          continue;
+        double dValue = 0.0;
+        std::vector<double> vdVec;
+        (void) h5u::nReadDouble(hFile, vsChain[i], &dValue);
+        if (   (0 != h5u::nReadAttrDoubles(hFile, vsChain[i], "vector", vdVec))
+            || (3 != vdVec.size()) )
+          continue;
+        std::string sUnits;
+        (void) h5u::nReadAttrString(hFile, vsChain[i], "units", &sUnits);
+        if ( ("rad" == sUnits) || ("radian" == sUnits) )
+          dValue *= 180.0 / 3.14159265358979323846;
+        double a3dVec[3];
+        vNeXusToDtrek(&vdVec[0], a3dVec);
+        m_vsCrysGonioNames.push_back(Cstring(vsChain[i].substr(vsChain[i].find_last_of('/') + 1).c_str()));
+        m_vdCrysGonioValues.push_back(dValue);
+        for (int k = 0; k < 3; k++)
+          m_vdCrysGonioVectors.push_back(a3dVec[k]);
+      }
+    if (m_vsCrysGonioNames.empty())
+      {
+        // Mantid "Universal" goniometer, angles unknown
+        const char *apcNames[3] = {"omega", "chi", "phi"};
+        const double a9dVec[9]  = {0, 1, 0,  0, 0, -1,  0, 1, 0};
+        for (int i = 0; i < 3; i++)
+          {
+            m_vsCrysGonioNames.push_back(apcNames[i]);
+            m_vdCrysGonioValues.push_back(0.0);
+          }
+        m_vdCrysGonioVectors.assign(a9dVec, a9dVec + 9);
+        cout << "WARNING: no goniometer in " << rsFilename << "; omega chi phi set to 0.\n" << flush;
+      }
+    m_sCrysGonioType = "Universal";
+  }
+
+  // Crystal (if known), run information
+  {
+    std::vector<double> vdCell;
+    if (   (0 == h5u::nReadDoubles(hFile, "/entry/sample/unit_cell", vdCell))
+        && (6 == vdCell.size()) && (1.5 < vdCell[0]) )
+      m_vdUnitCell = vdCell;
+    std::string sTemp;
+    if (0 == h5u::nReadString(hFile, "/entry/run_number", &sTemp))
+      m_sRunName = sTemp.c_str();
+    else
+      m_sRunName = sFileGetBasename(rsFilename);
+    if (0 == h5u::nReadString(hFile, "/entry/title", &sTemp))
+      m_sComment = sTemp.c_str();
+    if (0 == h5u::nReadString(hFile, "/entry/start_time", &sTemp))
+      m_sStartTime = sTemp.c_str();
+    if (0 == h5u::nReadString(hFile, "/entry/instrument/name", &sTemp))
+      m_sInstrument = sTemp.c_str();
+  }
+
+  // Detector description for the header: an identity detector frame, so
+  // that the "mm" coordinates of a pixel are its laboratory position.
+  m_bPanels  = true;
+  m_sDetType = "panels";
+  m_a3dFastVec[0] = 1.0; m_a3dFastVec[1] = 0.0; m_a3dFastVec[2] = 0.0;
+  m_a3dSlowVec[0] = 0.0; m_a3dSlowVec[1] = 1.0; m_a3dSlowVec[2] = 0.0;
+  {
+    const char *apcNames[6] = {"rot1", "rot2", "rot3", "slide1", "slide2", "distance"};
+    const double a6dVal[6]  = {0, 0, 0, 0, 0, 1};
+    const double a18dVec[18] = {1, 0, 0,  0, 1, 0,  0, 0, 1,  1, 0, 0,  0, 1, 0,  0, 0, 1};
+    m_vsDetGonioNames.clear();
+    for (int i = 0; i < 6; i++)
+      m_vsDetGonioNames.push_back(apcNames[i]);
+    m_vdDetGonioValues.assign(a6dVal, a6dVal + 6);
+    m_vdDetGonioVectors.assign(a18dVec, a18dVec + 18);
+  }
+  m_a2dBeamCenter[0] = m_a2dBeamCenter[1] = 0.0;
+  m_a2dPixelSize[0]  = m_vPanels[0].dDu;
+  m_a2dPixelSize[1]  = m_vPanels[0].dDv;
+  m_a3dDetSize[0]    = m_nDim0 * m_vPanels[0].dDu;
+  m_a3dDetSize[1]    = m_nDim1 * m_vPanels[0].dDv;
+  m_a3dDetSize[2]    = 0.0;
+
+  cout << "TOF-Laue histograms: " << m_vPanels.size() << " panels, " << m_nNumChan
+       << " TOF channels from " << vdEdges.front() << " to " << vdEdges.back()
+       << " us, L1 " << m_dL1 << " mm.\n" << flush;
+  return (0);
+}
+
+int
+CPCSVolume::nBuildPanelHeader(Cimage_header* poHeader, const Cstring& rsNameForTemplate,
+                              const int nChan)
+{
+  // Panels_spatial: one keyword per panel (see Cspatial.h)
+
+  Cstring sDet = "Detector1_";
+  char    acBuf[512];
+
+  (void) poHeader->nReplaceValue(sDet + "SPATIAL_BEAM_POSITION", Cstring("0 0"));
+  (void) poHeader->nReplaceValue(sDet + "SPATIAL_DISTORTION_INFO", Cstring("0 0 1 1"));
+  (void) poHeader->nReplaceValue(sDet + "SPATIAL_DISTORTION_TYPE", Cstring("Panels_spatial"));
+  (void) poHeader->nReplaceValue(sDet + "SPATIAL_DISTORTION_VECTORS", Cstring("1 0 0 1"));
+  (void) poHeader->nReplaceValue(sDet + "PANELS_NUMBER", (int) m_vPanels.size());
+  for (size_t p = 0; p < m_vPanels.size(); p++)
+    {
+      const tTOFPanel& rP = m_vPanels[p];
+      snprintf(acBuf, sizeof(acBuf),
+               "%d %d %d %d %.4f %.4f %.4f %.7f %.7f %.7f %.7f %.7f %.7f %.6f %.6f",
+               rP.nBank, rP.nStart, rP.nNx, rP.nNy,
+               rP.a3dOrigin[0], rP.a3dOrigin[1], rP.a3dOrigin[2],
+               rP.a3dU[0], rP.a3dU[1], rP.a3dU[2], rP.a3dV[0], rP.a3dV[1], rP.a3dV[2],
+               rP.dDu, rP.dDv);
+      snprintf(acBuf + 400, 100, "PANEL_%d", (int) p + 1);
+      (void) poHeader->nReplaceValue(sDet + Cstring(acBuf + 400), Cstring(acBuf));
+    }
+
+  // Predicted TOF width: the spot width grows like cot(theta) with the
+  // mosaic spread; about 1 + 1.5/sin(theta) channels for 0.5 % bins.
+  Cstring sWidth;
+  if (   (0.0 < m_dTOFBinRatio)
+      && (0 != poHeader->nGetValue(CTOFLaue::ms_sWidthModel, &sWidth)) )
+    {
+      snprintf(acBuf, sizeof(acBuf), "1 0 %.4f", 0.0075 / m_dTOFBinRatio);
+      (void) poHeader->nReplaceValue(CTOFLaue::ms_sWidthModel, Cstring(acBuf));
+    }
+  return (0);
+}
+
 int
 CPCSVolume::nBuildHeader(Cimage_header* poHeader, const Cstring& rsNameForTemplate,
                          const int nChan)
@@ -907,8 +1371,13 @@ CPCSVolume::nBuildHeader(Cimage_header* poHeader, const Cstring& rsNameForTempla
   (void) poHeader->nReplaceValue(sDet + "NONUNF_TYPE", Cstring("None"));
   (void) poHeader->nReplaceValue(Cstring("DTREK_NONUNF_OKVALUE"), Cstring("0"));  // 0 counts are valid
 
-  // Spatial: cylindrical detector, beam position and pixel sizes
+  // Spatial: multi-panel detector, or the PCS cylinder (beam position and
+  // pixel sizes)
 
+  if (m_bPanels)
+    (void) nBuildPanelHeader(poHeader, rsNameForTemplate, nChan);
+  else
+  {
   (void) poHeader->nReplaceValue(sDet + "SPATIAL_BEAM_POSITION", 2, m_a2dBeamCenter, 4);
   a4dTemp[0] = m_a2dBeamCenter[0];
   a4dTemp[1] = m_a2dBeamCenter[1];
@@ -917,6 +1386,7 @@ CPCSVolume::nBuildHeader(Cimage_header* poHeader, const Cstring& rsNameForTempla
   (void) poHeader->nReplaceValue(sDet + "SPATIAL_DISTORTION_INFO", 4, a4dTemp, 5);
   (void) poHeader->nReplaceValue(sDet + "SPATIAL_DISTORTION_TYPE", Cstring("Cylinder_spatial"));
   (void) poHeader->nReplaceValue(sDet + "SPATIAL_DISTORTION_VECTORS", Cstring("1 0 0 1"));
+  }
 
   // TOF channels (keyword names as in the original PCS d*TREK)
 
@@ -979,6 +1449,18 @@ CPCSVolume::nBuildHeader(Cimage_header* poHeader, const Cstring& rsNameForTempla
 
   // Run information
 
+  if (m_bPanels)
+    {
+      (void) poHeader->nReplaceValue(Cstring("TOF_RUN"), m_sRunName);
+      if ("" != m_sInstrument)
+        (void) poHeader->nReplaceValue(Cstring("TOF_INSTRUMENT"), m_sInstrument);
+      if ("" != m_sComment)
+        (void) poHeader->nReplaceValue(Cstring("TOF_TITLE"), m_sComment);
+      if ("" != m_sStartTime)
+        (void) poHeader->nReplaceValue(Cstring("TOF_START_TIME"), m_sStartTime);
+      (void) poHeader->nReplaceValue(Cstring("TOF_IMAGE"), nChan);
+      return (0);
+    }
   (void) poHeader->nReplaceValue(Cstring("PCS_RUN"), m_sRunName);
   if ("" != m_sStartTime)
     (void) poHeader->nReplaceValue(Cstring("PCS_START_TIME"), m_sStartTime);

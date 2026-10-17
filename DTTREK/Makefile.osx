@@ -64,7 +64,7 @@ CCDEFS       = $(DZ) -DRAXIS -DSIEMENS -DMARCCD
 # Choose only ONE of the next definitions
 
 MSCOBJSDZ   = raxis.o bs.o marccd.o dip2030.o adscccd.o medoptics.o brandeisccd.o marip.o pck.o winbmp.o \
-cbfdtrek.o nexuspcs.o CTOFLaue.o CLaueNorm.o
+cbfdtrek.o nexuspcs.o CTOFLaue.o CLaueNorm.o h5util.o nxevents.o
 
 MSCOBJS    = $(MSCOBJSDZ)
 
@@ -125,7 +125,7 @@ ALL	   =	dtfind dtpixhist dtindex dtrefine dtpredict dtstrategy \
 		dtcompose dtdecompose dtbin dtheadermerge \
 		dtcell dtsmooth dtdistor \
 		dtx2refln dtsbcdark dtsbcdarkmask dtrebatch dtdisplayupdate \
-		dtpcsproject dtref2afout dtlauenorm tCTOFLaue \
+		dtpcsproject dtref2afout dtlauenorm tCTOFLaue dteventbin dtisawub \
 
 # OSF/Motif is NOT needed to compile modules in this directory
 # It helps with distribution if -static is used for linux with these modules

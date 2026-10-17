@@ -80,6 +80,7 @@ Cstring Cspatial::ms_sSpatialTypeComplex       = D_K_SpatialTypeComplex;
 Cstring Cspatial::ms_sSpatialTypeNone          = D_K_SpatialTypeNone;
 Cstring Cspatial::ms_sSpatialTypeInterp        = D_K_SpatialTypeInterp;
 Cstring Cspatial::ms_sSpatialTypeCylinder      = "Cylinder_spatial";
+Cstring Cspatial::ms_sSpatialTypePanels        = "Panels_spatial";
 Cstring Cspatial::ms_sSpatialParallax          = "SPATIAL_PARALLAX";
 
 // Parallax correction of the original PCS d*TREK, recovered from its
@@ -235,6 +236,63 @@ Cspatial::Cspatial(Cimage_header& oHeader, const Cstring& sPre)
 	  else
 	    {
 	      cout << "Cspatial: error reading simple spatial distortion from header!\n";
+	      nStat++;
+	    }
+	}
+      else if (ms_sSpatialTypePanels == sTemp)
+	{
+	  // Multi-panel TOF-Laue detector (see Cspatial.h)
+
+	  int nNum = 0;
+	  (void) nInitValues(0.0f, 0.0f, 1.0f, 1.0f, nDim0, nDim1,
+			     1.0f, 0.0f, 0.0f, 1.0f);
+	  m_bPanels = true;
+	  m_vPanels.clear();
+	  if (0 != oHeader.nGetValue(sPrefix + "PANELS_NUMBER", &nNum))
+	    nNum = 0;
+	  for (int k = 1; k <= nNum; k++)
+	    {
+	      double a15dV[15];
+	      char   acKey[32];
+	      snprintf(acKey, sizeof(acKey), "PANEL_%d", k);
+	      if (0 != oHeader.nGetValue(sPrefix + Cstring(acKey), 15, a15dV))
+		{
+		  cout << "Cspatial: error reading " << sPrefix << acKey << endl;
+		  nStat++;
+		  continue;
+		}
+	      tSpatialPanel oP;
+	      oP.nBank  = (int) a15dV[0];
+	      oP.nStart = (int) a15dV[1];
+	      oP.nNx    = (int) a15dV[2];
+	      oP.nNy    = (int) a15dV[3];
+	      for (int i = 0; i < 3; i++)
+		{
+		  oP.a3dO[i] = a15dV[4 + i];
+		  oP.a3dU[i] = a15dV[7 + i];
+		  oP.a3dV[i] = a15dV[10 + i];
+		}
+	      oP.dDu = a15dV[13];
+	      oP.dDv = a15dV[14];
+	      oP.a3dN[0] = oP.a3dU[1] * oP.a3dV[2] - oP.a3dU[2] * oP.a3dV[1];
+	      oP.a3dN[1] = oP.a3dU[2] * oP.a3dV[0] - oP.a3dU[0] * oP.a3dV[2];
+	      oP.a3dN[2] = oP.a3dU[0] * oP.a3dV[1] - oP.a3dU[1] * oP.a3dV[0];
+	      double dLen = sqrt(oP.a3dN[0] * oP.a3dN[0] + oP.a3dN[1] * oP.a3dN[1]
+				 + oP.a3dN[2] * oP.a3dN[2]);
+	      for (int i = 0; (i < 3) && (0.0 < dLen); i++)
+		oP.a3dN[i] /= dLen;
+	      m_vPanels.push_back(oP);
+	    }
+	  int nRows = nDim1;
+	  for (size_t p = 0; p < m_vPanels.size(); p++)
+	    nRows = max(nRows, m_vPanels[p].nStart + m_vPanels[p].nNy);
+	  m_vnPanelOfRow.assign(nRows, -1);
+	  for (size_t p = 0; p < m_vPanels.size(); p++)
+	    for (int r = 0; r < m_vPanels[p].nNy; r++)
+	      m_vnPanelOfRow[m_vPanels[p].nStart + r] = (int) p;
+	  if (m_vPanels.empty())
+	    {
+	      cout << "Cspatial: no panels in the Panels_spatial header!\n";
 	      nStat++;
 	    }
 	}
@@ -472,6 +530,9 @@ int Cspatial::nInitValues(void)
   //
 
   m_bPCSCylinder        = false;
+  m_bPanels             = false;
+  m_vPanels.clear();
+  m_vnPanelOfRow.clear();
   m_a2fParallax[0]      = s_c_a2fPCSParallax[0];
   m_a2fParallax[1]      = s_c_a2fPCSParallax[1];
   m_fParallaxLambda     = 0.0f;
@@ -964,6 +1025,24 @@ int Cspatial::nPixeltoMM(const float fPx0,
       // Input pixels are out-of-bounds
       return (1);
     }
+  else if ( (eSpatial_simple_type == m_eThe_Type) && m_bPanels )
+    {
+      // Multi-panel detector: laboratory position of the pixel (mm)
+
+      int nP = nPanelOfPixel(fPx1);
+      if (0 > nP)
+        return (1);
+      const tSpatialPanel& rP = m_vPanels[nP];
+      if (fPx0 > (float) rP.nNx)
+        return (1);
+      double dA = (double) fPx0 - 0.5;
+      double dB = (double) fPx1 - rP.nStart - 0.5;
+      *pfXmm = (float) (rP.a3dO[0] + dA * rP.dDu * rP.a3dU[0] + dB * rP.dDv * rP.a3dV[0]);
+      *pfYmm = (float) (rP.a3dO[1] + dA * rP.dDu * rP.a3dU[1] + dB * rP.dDv * rP.a3dV[1]);
+      *pfZRelativeCoordinate
+             = (float) (rP.a3dO[2] + dA * rP.dDu * rP.a3dU[2] + dB * rP.dDv * rP.a3dV[2]);
+      return (0);
+    }
   else if (eSpatial_simple_type == m_eThe_Type)
     {
       //  Flat plate geometry computations.
@@ -1070,6 +1149,36 @@ int Cspatial::nMMtoPixel(float fXmm,
 	      m_nNumErrorOut++;
 	    }
           return (1);
+        }
+      else if ( (eSpatial_simple_type == m_eThe_Type) && m_bPanels )
+        {
+          // Multi-panel detector: the panel whose plane holds the point
+
+          double a3dP[3] = {fXmm, fYmm, fZRelativeCoordinate};
+          double dBest = 1.0e30;
+          int    nBest = -1;
+          double dBestA = 0.0, dBestB = 0.0;
+          for (size_t p = 0; p < m_vPanels.size(); p++)
+            {
+              const tSpatialPanel& rP = m_vPanels[p];
+              double a3dD[3] = {a3dP[0] - rP.a3dO[0], a3dP[1] - rP.a3dO[1], a3dP[2] - rP.a3dO[2]};
+              double dDist = fabs(a3dD[0] * rP.a3dN[0] + a3dD[1] * rP.a3dN[1] + a3dD[2] * rP.a3dN[2]);
+              double dA = (a3dD[0] * rP.a3dU[0] + a3dD[1] * rP.a3dU[1] + a3dD[2] * rP.a3dU[2]) / rP.dDu + 0.5;
+              double dB = (a3dD[0] * rP.a3dV[0] + a3dD[1] * rP.a3dV[1] + a3dD[2] * rP.a3dV[2]) / rP.dDv + 0.5;
+              if (   (0.0 <= dA) && (dA <= rP.nNx) && (0.0 <= dB) && (dB <= rP.nNy)
+                  && (dDist < dBest) )
+                {
+                  dBest  = dDist;
+                  nBest  = (int) p;
+                  dBestA = dA;
+                  dBestB = dB;
+                }
+            }
+          if ( (0 > nBest) || (1.0 < dBest) )
+            return (1);
+          *pfPx0 = (float) dBestA;
+          *pfPx1 = (float) (m_vPanels[nBest].nStart + dBestB);
+          return (0);
         }
       else if ( eSpatial_simple_type == m_eThe_Type )
         {
@@ -1479,7 +1588,25 @@ int Cspatial::nUpdateHeader(Cimage_header *poHeader, const Cstring &sPre)
   
   if (eSpatial_simple_type == m_eThe_Type)
     {
-      if (m_bPCSCylinder)
+      if (m_bPanels)
+        {
+          poHeader->nReplaceValue(sPrefix + ms_sSpatialDistortionType,
+                                  ms_sSpatialTypePanels);
+          poHeader->nReplaceValue(sPrefix + "PANELS_NUMBER", (int) m_vPanels.size());
+          for (size_t p = 0; p < m_vPanels.size(); p++)
+            {
+              const tSpatialPanel& rP = m_vPanels[p];
+              char acKey[32], acVal[512];
+              snprintf(acKey, sizeof(acKey), "PANEL_%d", (int) p + 1);
+              snprintf(acVal, sizeof(acVal),
+                       "%d %d %d %d %.4f %.4f %.4f %.7f %.7f %.7f %.7f %.7f %.7f %.6f %.6f",
+                       rP.nBank, rP.nStart, rP.nNx, rP.nNy, rP.a3dO[0], rP.a3dO[1], rP.a3dO[2],
+                       rP.a3dU[0], rP.a3dU[1], rP.a3dU[2], rP.a3dV[0], rP.a3dV[1], rP.a3dV[2],
+                       rP.dDu, rP.dDv);
+              poHeader->nReplaceValue(sPrefix + Cstring(acKey), Cstring(acVal));
+            }
+        }
+      else if (m_bPCSCylinder)
         {
           poHeader->nReplaceValue(sPrefix + ms_sSpatialDistortionType,
                                   ms_sSpatialTypeCylinder);
@@ -1604,4 +1731,66 @@ bool Cspatial::bChangeBinning(int nFastRatio, int nSlowRatio)
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+int
+Cspatial::nPanelOfPixel(const float fPx1) const
+{
+  if ( !m_bPanels || (0.0f > fPx1) )
+    return (-1);
+  int nRow = (int) fPx1;
+  if (nRow >= (int) m_vnPanelOfRow.size())
+    return (-1);
+  return (m_vnPanelOfRow[nRow]);
+}
 
+int
+Cspatial::nPanelAxes(const float fPx1, double a3dU[3], double a3dV[3]) const
+{
+  int nPanel = nPanelOfPixel(fPx1);
+  if (0 > nPanel)
+    return (1);
+  for (int i = 0; i < 3; i++)
+    {
+      a3dU[i] = m_vPanels[nPanel].a3dU[i];
+      a3dV[i] = m_vPanels[nPanel].a3dV[i];
+    }
+  return (0);
+}
+
+int
+Cspatial::nPanelIntersect(const double a3dS[3], double a3dP[3], double a3dN[3]) const
+{
+  // The nearest panel hit by the ray t * S (t > 0) from the crystal.
+
+  double dBestT = 1.0e30;
+  int    nBest  = -1;
+  for (size_t p = 0; p < m_vPanels.size(); p++)
+    {
+      const tSpatialPanel& rP = m_vPanels[p];
+      double dSN = a3dS[0] * rP.a3dN[0] + a3dS[1] * rP.a3dN[1] + a3dS[2] * rP.a3dN[2];
+      if (1.0e-12 > fabs(dSN))
+        continue;
+      double dON = rP.a3dO[0] * rP.a3dN[0] + rP.a3dO[1] * rP.a3dN[1] + rP.a3dO[2] * rP.a3dN[2];
+      double dT  = dON / dSN;
+      if ( (0.0 >= dT) || (dT >= dBestT) )
+        continue;
+      double a3dD[3] = {dT * a3dS[0] - rP.a3dO[0], dT * a3dS[1] - rP.a3dO[1],
+                        dT * a3dS[2] - rP.a3dO[2]};
+      double dA = (a3dD[0] * rP.a3dU[0] + a3dD[1] * rP.a3dU[1] + a3dD[2] * rP.a3dU[2]) / rP.dDu + 0.5;
+      double dB = (a3dD[0] * rP.a3dV[0] + a3dD[1] * rP.a3dV[1] + a3dD[2] * rP.a3dV[2]) / rP.dDv + 0.5;
+      if ( (0.0 > dA) || (dA > rP.nNx) || (0.0 > dB) || (dB > rP.nNy) )
+        continue;
+      dBestT = dT;
+      nBest  = (int) p;
+    }
+  if (0 > nBest)
+    return (1);
+  const tSpatialPanel& rP = m_vPanels[nBest];
+  double dSign = ( 0.0 < (a3dS[0] * rP.a3dN[0] + a3dS[1] * rP.a3dN[1] + a3dS[2] * rP.a3dN[2]) )
+                 ? 1.0 : -1.0;
+  for (int i = 0; i < 3; i++)
+    {
+      a3dP[i] = dBestT * a3dS[i];
+      a3dN[i] = dSign * rP.a3dN[i];
+    }
+  return (0);
+}

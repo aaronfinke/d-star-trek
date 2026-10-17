@@ -18,6 +18,15 @@
 //    Each TOF channel is presented to the rest of d*TREK as one image of a
 //    scan whose "rotation" axis is the channel index (see CTOFLaue.h).
 //
+//    The same class reads NXlauetof histogram files (ESS NMX reduced data,
+//    or event data histogrammed by dteventbin, e.g. SNS MANDI): one
+//    (y, x, TOF) array per flat rectangular detector panel.  The panels are
+//    tiled into one mosaic image per channel, panel after panel along px1
+//    with a gap of masked pixels between them:
+//       px0 = x index,  px1 = panel start + y index
+//    and the header describes each panel (Panels_spatial, see Cspatial.h)
+//    in the d*TREK laboratory frame (NeXus x -> -X, y -> Y, z -> -Z; mm).
+//
 
 //+Include files
 
@@ -30,6 +39,23 @@
 // Special channel numbers for nReadPCSNexusData() and the requested channel
 const int nPCS_CHANNEL_SUM = -1;     // Sum over all TOF channels (a Laue pattern)
 const int nPCS_CHANNEL_MAX = -2;     // Maximum over all TOF channels (an "overlay")
+
+// A flat detector panel of a multi-panel (NXlauetof) detector, in the
+// d*TREK laboratory frame (mm)
+struct tTOFPanel
+{
+  int    nBank;          // Bank number of the instrument
+  int    nStart;         // First mosaic row (px1) of the panel
+  int    nNx;            // Pixels along px0 (x index)
+  int    nNy;            // Pixels along px1 (y index)
+  double a3dOrigin[3];   // Centre of pixel (0, 0)
+  double a3dU[3];        // Unit vector of increasing px0
+  double a3dV[3];        // Unit vector of increasing px1
+  double dDu;            // Pixel pitch along px0
+  double dDv;            // Pixel pitch along px1
+};
+
+const int nTOF_PANEL_GAP = 8;        // Masked pixels between panels in the mosaic
 
 // Detector response correction modes (see CPCSVolume::nSetResponse)
 const int nPCS_RESPONSE_NONE    = 0;
@@ -93,6 +119,9 @@ CPCSVolume();
 
 void vClear(void);
 int  nApplyResponse(void);
+int  nLoadLauetof(long long llFile, const Cstring& rsFilename);
+int  nBuildPanelHeader(Cimage_header* poHeader, const Cstring& rsNameForTemplate,
+                       const int nChan);
 
 Cstring             m_sFilename;
 long                m_lFileTime;      // Modification time of the loaded file
@@ -135,6 +164,12 @@ Cstring              m_sStartTime;
 Cstring              m_sEndTime;
 Cstring              m_sComment;
 double               m_dMicroAmpHours;
+
+// Multi-panel (NXlauetof) detector
+bool                   m_bPanels;
+std::vector<tTOFPanel> m_vPanels;
+double                 m_dTOFBinRatio;   // Median t[i+1]/t[i] - 1 of the channels
+Cstring                m_sInstrument;
 
 static CPCSVolume*   ms_poInstance;
 };

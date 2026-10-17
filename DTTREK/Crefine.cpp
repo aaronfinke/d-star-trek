@@ -5509,6 +5509,17 @@ int Crefine::nRefineLoop(const int nLoopIn)
           m_ppoCrystals[m_nTwinID-1]->vGetBMatrix(&a3x3fB[0][0]);              // Loaded when we called nCalcOrientMatrix
           fDet = fInvMat3D(&a3x3fB[0][0],&a3x3fBInv[0][0]);
                   
+          // Without lattice constraints the cell basis vectors are those of
+          // a triclinic cell (see nGetDerivVecs above), so the B derivatives
+          // must not be folded together for the crystal system either.
+          if (!m_anRefineFlags[ms_nCrysConstraints])
+            {
+              int nSG = m_ppoCrystals[m_nTwinID-1]->m_poSpacegroup->nGet();
+              m_ppoCrystals[m_nTwinID-1]->m_poSpacegroup->vSet(1);
+              m_ppoCrystals[m_nTwinID-1]->nCalcGetBDeriv(a7x3x3fCrysDeriv,&nx,fOrigSourceWave);
+              m_ppoCrystals[m_nTwinID-1]->m_poSpacegroup->vSet(nSG);
+            }
+          else
           m_ppoCrystals[m_nTwinID-1]->nCalcGetBDeriv(a7x3x3fCrysDeriv,&nx,fOrigSourceWave);
           m_ppoCrystals[m_nTwinID-1]->nCalcGetRotDeriv(a3x3x3fCrysRotDeriv);
 
@@ -5829,6 +5840,18 @@ int Crefine::nRefineLoop(const int nLoopIn)
                   // parallax correction for lambda_obs (see nCopyReflns).
                   a2fVDErr[0] = a3fVDCO[0] - a3fVDCC[0];
                   a2fVDErr[1] = a3fVDCO[1] - a3fVDCC[1];
+                  if (m_ppoDetector[0]->m_poSpatial->bIsPanels())
+                  {
+                      // The mm coordinates of a panel detector are laboratory
+                      // positions: take the error along the panel's own axes.
+                      double a3dU[3], a3dV[3], a3dErr[3];
+                      vSubVec3DVec3D(a3fVDCO, a3fVDCC, a3dErr);
+                      if (0 == m_ppoDetector[0]->m_poSpatial->nPanelAxes(fPx1, a3dU, a3dV))
+                      {
+                          a2fVDErr[0] = fDot3D(a3dErr, a3dU);
+                          a2fVDErr[1] = fDot3D(a3dErr, a3dV);
+                      }
+                  }
 
                   fMMError  = afResidVecLen[nRef];
                   fROTError = fabs(dChanErr);

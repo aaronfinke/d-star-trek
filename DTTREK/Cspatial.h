@@ -48,6 +48,7 @@
 
 //+Include files
 
+#include <vector>
 #include "Cstring.h"
 #include "Cimage.h"
 #include "Cdetector.h"
@@ -98,6 +99,7 @@ static Cstring ms_sSpatialTypeComplex;
 static Cstring ms_sSpatialTypeNone;
 static Cstring ms_sSpatialTypeInterp;
 static Cstring ms_sSpatialTypeCylinder;     // "Cylinder_spatial" (LANSCE PCS)
+static Cstring ms_sSpatialTypePanels;       // "Panels_spatial" (multi-panel TOF-Laue)
 static Cstring ms_sSpatialParallax;         // "SPATIAL_PARALLAX"
 
 static Cstring ms_sPixelSize;
@@ -177,6 +179,26 @@ bool           m_bPCSCylinder;
 float          m_a2fParallax[2];   // P0, P1
 float          m_fParallaxLambda;  // Wavelength used for the parallax correction
 
+// Multi-panel TOF-Laue detector (Panels_spatial; SNS MANDI, ESS NMX).  The
+// image is a mosaic of flat panels stacked along px1.  The detector frame is
+// the identity, so the "mm" coordinates (X, Y, Z) of a pixel are its
+// laboratory position relative to the crystal.  Header keywords:
+//    <prefix>PANELS_NUMBER  N
+//    <prefix>PANEL_k        bank start nx ny  ox oy oz  ux uy uz  vx vy vz  du dv
+// with o the centre of the panel's pixel (0, 0), u and v the unit vectors of
+// increasing px0 and px1, du and dv the pixel pitch (mm), start the first
+// mosaic row (px1) of the panel.  A pixel index i has its centre at i + 0.5.
+
+struct tSpatialPanel
+{
+  int    nBank, nStart, nNx, nNy;
+  double a3dO[3], a3dU[3], a3dV[3], a3dN[3];   // N: unit normal
+  double dDu, dDv;
+};
+bool                        m_bPanels;
+std::vector<tSpatialPanel>  m_vPanels;
+std::vector<int>            m_vnPanelOfRow;    // Panel of each px1 row, -1 in gaps
+
 int            m_nBadFlag;
 
 int            m_nNumErrorOut;
@@ -238,6 +260,15 @@ inline eSpatial_geo_types eSpatialType(void)
 
 inline void vSetRadius(const float fRadius) { m_fRadius = fRadius; }; // Not normally used.
 inline bool bIsPCSCylinder(void) const { return (m_bPCSCylinder); }
+inline bool bIsPanels(void) const { return (m_bPanels); }
+inline int  nGetNumPanels(void) const { return ((int) m_vPanels.size()); }
+// Panels: where the ray t*S (t > 0) from the crystal meets a panel.  Returns
+// 0 and the point (mm) and the panel normal, or 1 if it misses all panels.
+int  nPanelIntersect(const double a3dS[3], double a3dP[3], double a3dN[3]) const;
+int  nPanelOfPixel(const float fPx1) const;
+// Panels: unit vectors u and v (of increasing px0 and px1) of the panel that
+// holds mosaic row fPx1.  Returns 0, or 1 if fPx1 is not on a panel.
+int  nPanelAxes(const float fPx1, double a3dU[3], double a3dV[3]) const;
 inline void vSetParallaxWavelength(const float fLambda) { m_fParallaxLambda = fLambda; }
 inline float fGetParallaxWavelength(void) const { return (m_fParallaxLambda); }
 inline void vSetVerbose(const int nVerbose) { m_nVerbose = nVerbose; }

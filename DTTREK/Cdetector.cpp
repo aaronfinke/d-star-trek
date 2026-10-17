@@ -1190,6 +1190,23 @@ int Cdetector::nScaleSOnPlate(const float fS[3], float fTS[3])
                                  // This is only done on the RAPID, where m_a3fDN is not relevant.
 
     fDetDistance = (double)fGetDistance();
+
+    if (m_poSpatial->bIsPanels())
+    {
+        // Multi-panel TOF-Laue detector: the detector frame is the identity,
+        // T S is the point where the ray meets a panel.
+        double a3dS[3] = {fS[0], fS[1], fS[2]};
+        double a3dP[3], a3dN[3];
+        if (0 != m_poSpatial->nPanelIntersect(a3dS, a3dP, a3dN))
+            return 1;
+        double dPN = a3dP[0] * a3dN[0] + a3dP[1] * a3dN[1] + a3dP[2] * a3dN[2];
+        for (int i = 0; i < 3; i++)
+        {
+            fTS[i] = (float) a3dP[i];
+            m_a3fLocalDN[i] = (float) (a3dN[i] * dPN);
+        }
+        return 0;
+    }
     
     if( m_poSpatial->eSpatialType() == eSpatial_flat_geometry )
     {
@@ -1289,6 +1306,17 @@ int Cdetector::nScaleSOnPlate(const float fS[3], float fTS[3])
 
 double Cdetector::dCalcTOFLaueL2(const double a3fS[3])
 {
+  if (m_poSpatial->bIsPanels())
+    {
+      // Multi-panel detector: distance to the panel that the ray meets
+      double a3dP[3], a3dN[3];
+      if (0 != m_poSpatial->nPanelIntersect(a3fS, a3dP, a3dN))
+        return (0.0);
+      double dLenS = sqrt(a3fS[0] * a3fS[0] + a3fS[1] * a3fS[1] + a3fS[2] * a3fS[2]);
+      double dLenP = sqrt(a3dP[0] * a3dP[0] + a3dP[1] * a3dP[1] + a3dP[2] * a3dP[2]);
+      return ( (0.0 < dLenS) ? dLenP : 0.0 );
+    }
+
   // The axis of the PCS detector cylinder is the fast pixel direction and
   // the crystal is on that axis, so the flight path to the cylinder (radius
   // = detector distance D) along the unit vector S is D / |S perp. to axis|,
@@ -1447,7 +1475,8 @@ int Cdetector::nCalcDetCoords(const float fXR[3],
 
   // There cannot be an intersection if these have a positive dot product.
   // Otherwise, we have the beam hitting the image.
-  if( m_poSpatial->eSpatialType() == eSpatial_flat_geometry && fXRdotDN < fS0dotDN )
+  if(    m_poSpatial->eSpatialType() == eSpatial_flat_geometry && fXRdotDN < fS0dotDN
+      && !m_poSpatial->bIsPanels() )
       return (1);
 
   vSubVec3DVec3D(fXR, fS0, fXRminusS0);   // Also used by oblique incidence calc
