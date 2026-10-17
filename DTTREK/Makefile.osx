@@ -43,6 +43,7 @@ OPTLEV     =    -O1 -g
 ##OPTLEV     =    -O2 -
 HOMEBREW   ?= /opt/homebrew
 HDF5HOME   ?= /opt/homebrew/opt/hdf5
+GEMMIHOME  ?= /opt/homebrew/opt/gemmi
 
 #############################################################################
 
@@ -98,10 +99,12 @@ CCFLAGS	   = -DOSX -DBINARY_NOT_BIN \
 				  -I$(PTYPESHOME)/include \
 				  -I$(CBFHOME)/include \
 				  -I$(HDF5HOME)/include \
+				  -I$(GEMMIHOME)/include \
 				  -L../DTDISPLAY -L. -L$(PTYPESHOME)/lib \
 				  -L$(CBFHOME)/lib \
 				  -L$(HOMEBREW)/lib \
 				  -L$(HDF5HOME)/lib \
+				  -L$(GEMMIHOME)/lib \
 				  -Wno-deprecated \
 				  -fsanitize=address -fno-omit-frame-pointer \
 				  -std=c++20
@@ -125,7 +128,7 @@ ALL	   =	dtfind dtpixhist dtindex dtrefine dtpredict dtstrategy \
 		dtcompose dtdecompose dtbin dtheadermerge \
 		dtcell dtsmooth dtdistor \
 		dtx2refln dtsbcdark dtsbcdarkmask dtrebatch dtdisplayupdate \
-		dtpcsproject dtref2afout dtlauenorm tCTOFLaue dteventbin dtisawub \
+		dtpcsproject dtref2afout dtlauenorm tCTOFLaue dteventbin dtisawub dtexport \
 
 # OSF/Motif is NOT needed to compile modules in this directory
 # It helps with distribution if -static is used for linux with these modules

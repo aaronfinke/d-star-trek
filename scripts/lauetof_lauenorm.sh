@@ -17,7 +17,7 @@
 #                 beside the bin directory of lauenorm)
 #   -out name     output MTZ file name (default lauenorm.mtz)
 #
-# The lists are converted with "dtref2afout -scale auto -theta" to
+# The lists are converted with "dtref2afout -scale auto -theta -keepneg" to
 # laueNorm001, laueNorm002, ... (one film pack per run).
 # Output (in dir): the MTZ file and lauenorm.log.
 
@@ -59,7 +59,7 @@ n=0
 for f in $LISTS; do
     n=$((n + 1))
     pack=$(printf '%03d' $n)
-    "$BIN/dtref2afout" -scale auto -theta -out "laueNorm$pack" "$f" \
+    "$BIN/dtref2afout" -scale auto -theta -keepneg -out "laueNorm$pack" "$f" \
         || { echo "ERROR: dtref2afout failed for $f" >&2; exit 1; }
     eval "LAUE$pack=\$PWD/laueNorm$pack; export LAUE$pack"
 done

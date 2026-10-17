@@ -1373,6 +1373,15 @@ tCTOFLaue:	tCTOFLaue.o Cscan.o Cimage.o CGonioMask.o CGonioShadow.o Cstring.o Cr
 		dtreklogic.o dskio.o dtrekvec.o dtreksys.o $(MSCOBJS)
 		$(CC) -o $@ $^  $(CCFLAGS) $(GLIBDIR) $(LIBS)
 
+dtexport.o:	dtexport.cpp Ccrystal.h Cgoniometer.h Csource.h Cimage_header.h
+
+dtexport:	dtexport.o Cscan.o Cimage.o CGonioMask.o CGonioShadow.o Cstring.o Crotation.o \
+		Cimage_header.o Cnonunf.o CImageWait.o ImagePool.o BitmapRLE.o C3Ddata.o CScanBitmap.o Cprofit2D.o CinterpMesh.o CSphericalHarmonic.o Cstat.o Crefln.o \
+		Creflnlist.o ResoBins.o Ccrystal.o Cspacegroup.o Cdetector.o Csource.o \
+		Cgoniometer.o Cspatial.o Cwavelength.o dtsvd.o dtarray.o \
+		dtreklogic.o dskio.o dtrekvec.o dtreksys.o $(MSCOBJS)
+		$(CC) -o $@ $^  $(CCFLAGS) $(GLIBDIR) $(LIBS) -lgemmi_cpp
+
 dteventbin.o:	dteventbin.cpp nxevents.h
 
 dteventbin:	dteventbin.o nxevents.o h5util.o

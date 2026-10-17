@@ -95,6 +95,9 @@ run LAUENORM. `dtref2afout` writes the same files as the legacy
 use an I/σ limit of about 2 for LAUENORM's scale factors instead of the 7 in
 the legacy `laue.dat`.
 
+To scale with AIMLESS (including its Laue version), convert afout files to an
+unmerged MTZ with `dtexport` (see [Export to MTZ](#export-to-mtz-for-aimless)).
+
 ### Model and conventions
 
 - **Wavelength.** λ = (t(c) + delay) / (252.7784 µs m⁻¹ Å⁻¹ · (L1 + L2)).
@@ -194,7 +197,7 @@ IPTS-37773, 10 runs, 40 panels of 256 × 256 pixels).
 runs `dteventbin` (for event files), `dtfind` over all channels and the whole
 mosaic, `dtindex -known -fourier`, three `dtrefine` stages and `dtintegrate
 -tofradius 5`, and writes the LAUENORM input with `dtref2afout -scale auto
--theta`. About 40 s per MANDI run. The last refinement stage refines an
+-theta -keepneg`. About 40 s per MANDI run. The last refinement stage refines an
 unconstrained cell (`+CrysAll -CrysConstraints`), as Mantid refines an
 unconstrained UB: it absorbs small systematic errors of the panel geometry and
 places the predictions on the outer panels, which have few found spots,
@@ -207,10 +210,90 @@ To merge with LAUENORM, using for example the control file that Mantid's
         -out merged.mtz lnorm_all_merged.dat r*/MANDI_*i.ref
 
 or natively, `scripts/pcs_merge.sh -head r13378/r2.head ...` (`r2.head` has
-the space-group-constrained cell).
+the space-group-constrained cell), or with AIMLESS after `dtexport` (next
+section).
 
 In dtrefine, the mm residuals and the `-rej` limits of a panel detector are
 along the axes of the panel of the predicted spot.
+
+### Export to MTZ for AIMLESS
+
+`dtexport` writes afout files (from `dtref2afout`, or Mantid's `laueNorm*`
+files) as one unmerged MTZ file for AIMLESS, including its Laue version:
+
+    dtexport -head r13378/r2.head -out mandi.mtz r*/refine.head r*/MANDI_*i.afout
+    dtexport -cell 65.73 65.73 151.88 90 90 120 -spacegroup P6522 -out mantid.mtz laueNorm3*
+
+- Each file becomes one batch, numbered from `-batch n` (default 1) in the
+  order given. The batch headers carry the cell, the mean wavelength and
+  `LDTYPE = 3` (Laue).
+- The columns are `H K L M/ISYM BATCH I SIGI LAMBDA ROT`. The indices are
+  reduced to the asymmetric unit with M/ISYM, and the file is sorted, as
+  POINTLESS writes unmerged data. ROT is 0, so that AIMLESS does not take the
+  batch number as the rotation angle (`-norot` omits it).
+- afout files hold no cell or space group. They come from a d\*TREK header
+  (`-head`) or from `-cell` and `-spacegroup`. The cell is made to obey the
+  space group, with a warning if that changes it; use a header with the
+  constrained cell (`r2.head` of `lauetof_process_run.sh`).
+- Other options: `-wave lmin lmax`, `-scale f`, `-project`, `-crystal`,
+  `-dataset`, `-title`. Reflections with σ ≤ 0 are skipped.
+- AIMLESS needs the negative intensities, so write the afout files with
+  `dtref2afout -keepneg`, as both scripts do. LAUENORM rejects zero and
+  negative intensities alike, so its results do not change. `dtexport` warns
+  if a file looks as if its negative intensities were set to 0.
+- **Crystal orientation.** d\*TREK headers among the input files (the refined
+  header of each run, one per afout file and in the same order) put the
+  orientation of each run into its batch header, so that AIMLESS can apply its
+  secondary-beam and absorption corrections. The header frame is the d\*TREK
+  laboratory frame:
+  - `UMAT` is the rotation U with U·B = G·(UB)_d\*TREK, where B is AIMLESS's
+    (Busing & Levy) B matrix of the MTZ cell and G is the crystal goniometer
+    matrix of the run. U is made orthogonal, which absorbs a refined cell that
+    does not obey the space group (`refine.head` of `lauetof_process_run.sh`).
+  - `SOURCE` is the d\*TREK source vector S0, anti-parallel to the beam.
+  - `E1` is the outermost goniometer axis, with one axis at datum 0.
+  - The rotation range is a nominal −0.5 to 0.5°, because AIMLESS ignores the
+    orientation of a batch without one; ROT is 0.
+
+  `dtexport` checks the wavelengths each header predicts for the reflections
+  of its afout file. A header paired with the wrong file (MANDI: 24 % rms) is
+  an error and nothing is written. On MANDI, the diffracted-beam directions
+  that the MTZ headers give agree with the predicted pixel positions to a
+  median 0.2° (maximum 0.45°).
+
+  AIMLESS makes each oriented batch a run of its own (a stationary exposure),
+  so `SCALES BATCH` fails ("no useful batch information"). Use
+  `SCALES CONSTANT`, one scale per run, which gives the same result, and add
+  `SECONDARY` or `ABSORPTION` as wanted.
+
+`dtexport` uses the [gemmi](https://gemmi.readthedocs.io) C++ library
+(`GEMMIHOME` in the master `Makefile`, default `/opt/homebrew/opt/gemmi`;
+`brew install gemmi`).
+
+On the nine MANDI runs, the Laue version of AIMLESS (Chebyshev λ
+normalization, 2–4 Å, batch scales, no orientation) gives the following:
+
+| Statistic | This build | Mantid's laueNorm files |
+|---|---|---|
+| CC½ overall / outer shell (2.61–2.50 Å) | 0.978 / 0.461 | 0.971 / 0.478 |
+| Rpim, all I+ and I− | 0.147 | 0.076 |
+| Completeness | 99.3 % | 99.2 % |
+| Observations / unique | 107,999 / 7,194 | 76,081 / 7,196 |
+
+The two merged data sets correlate at 0.970 (0.61 at 2.50–2.66 Å). Mantid's
+files hold 29 % fewer observations and no zero or negative intensities,
+because Mantid drops weak reflections before writing them; this build writes
+every predicted reflection. Keeping the weak ones raises Rpim, but CC½ is about
+the same.
+
+With the orientations (same keywords, `SCALES CONSTANT BFACTOR OFF`):
+
+| Scale model | Rmerge | Rpim (inner shell) | ⟨I/σ⟩ | CC½ |
+|---|---|---|---|---|
+| No orientation, `SCALES BATCH` | 0.575 | 0.147 (0.051) | 5.3 | 0.978 |
+| `CONSTANT`, `SECONDARY 0` | 0.575 | 0.147 (0.051) | 5.3 | 0.977 |
+| `CONSTANT`, `SECONDARY 4` | 0.561 | 0.143 (0.046) | 5.6 | 0.980 |
+| `CONSTANT`, `ABSORPTION 4` | 0.570 | 0.145 (0.053) | 5.4 | 0.979 |
 
 ### Validation against Mantid (MANDI CuZnSOD)
 

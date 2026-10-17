@@ -124,7 +124,7 @@ run "${RUN}_5refine3.log" "$BIN/dtrefine" r2.head find.ref +CrysAll -CrysConstra
 
 run "${RUN}_6integrate.log" "$BIN/dtintegrate" refine.head -seq 0 $LAST -reso $R1 $R2 \
     -wave $W1 $W2 -tofradius $TOFRAD -ref "${RUN}i.ref"
-run "${RUN}_7afout.log" "$BIN/dtref2afout" -scale auto -theta -out "${RUN}i.afout" "${RUN}i.ref"
+run "${RUN}_7afout.log" "$BIN/dtref2afout" -scale auto -theta -keepneg -out "${RUN}i.afout" "${RUN}i.ref"
 
 grep -h "rmsResid (mm)\|rmsResid (TOF" "${RUN}_5refine3.log" | tail -2 | sed 's/^/  /'
 tr -d '\r' < refine.head | grep "^CRYSTAL_UNIT_CELL=" | sed 's/^/  /'

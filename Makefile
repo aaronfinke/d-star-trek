@@ -72,6 +72,8 @@ INSTALLDIR = $(CURDIR)/bin$(OSTYPE)
 HOMEBREW   = /opt/homebrew
 # Directory where HDF5 is installed (needed for PCS NeXus TOF-Laue files).
 HDF5HOME   = /opt/homebrew/opt/hdf5
+# Directory where the gemmi C++ library is installed (dtexport writes MTZ files).
+GEMMIHOME  = /opt/homebrew/opt/gemmi
 
 CC  = /usr/bin/clang++
 CXX = /usr/bin/clang++
@@ -83,6 +85,7 @@ $(info Motif directory is $(MOTIFHOME))
 $(info CBF library directory is $(CBFHOME))
 $(info PTypes library directory is $(PTYPESHOME))
 $(info Installation directory is $(INSTALLDIR))
+$(info gemmi library directory is $(GEMMIHOME))
 
 export OSTYPE
 export CC
@@ -93,6 +96,7 @@ export PTYPESHOME
 export INSTALLDIR
 export HOMEBREW
 export HDF5HOME
+export GEMMIHOME
 
 $(info )
 all:
