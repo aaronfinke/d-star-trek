@@ -60,6 +60,14 @@ which runs
     dtintegrate Rrefine.head -flat -cor flat.h5 -type 204 -seq 0 95 -reso 1.0 20 -minpeakrad 2.0 \
                 -h 100 -100 -k 100 -100 -l 100 -100 -rect 0 18 255 1910 -wave 7.0 0.6 -pad 4 -window 20 20
     dtref2afout -scale 1000 Ri.ref
+    dtref2afout -scale auto -theta -keepneg -out Ri_aimless.afout Ri.ref
+    dtexport -batch 466 -out Ri.mtz Rrefine.head Ri_aimless.afout
+
+The last two steps (only if `dtexport` was built, which needs gemmi) write
+`Ri.mtz`, an unmerged MTZ file for AIMLESS with one batch, numbered by the run
+number, and the crystal orientation (see
+[Export to MTZ](#export-to-mtz-for-aimless)). `Ri.afout` keeps the legacy
+`negative.awk` format.
 
 TOF-Laue options:
 
@@ -196,8 +204,10 @@ IPTS-37773, 10 runs, 40 panels of 256 × 256 pixels).
 
 runs `dteventbin` (for event files), `dtfind` over all channels and the whole
 mosaic, `dtindex -known -fourier`, three `dtrefine` stages and `dtintegrate
--tofradius 5`, and writes the LAUENORM input with `dtref2afout -scale auto
--theta -keepneg`. About 40 s per MANDI run. The last refinement stage refines an
+-tofradius 5`, writes the LAUENORM input with `dtref2afout -scale auto
+-theta -keepneg`, and, if `dtexport` was built, `<run>i.mtz` for AIMLESS (one
+batch, numbered by the run number unless `-batch n` is given, with the crystal
+orientation). About 40 s per MANDI run. The last refinement stage refines an
 unconstrained cell (`+CrysAll -CrysConstraints`), as Mantid refines an
 unconstrained UB: it absorbs small systematic errors of the panel geometry and
 places the predictions on the outer panels, which have few found spots,

@@ -4,7 +4,7 @@
 # instrument (e.g. SNS MANDI, ESS NMX) with d*TREK:
 #
 #   [dteventbin] -> dtfind -> dtindex -> dtrefine (3 stages) -> dtintegrate
-#   -> dtref2afout
+#   -> dtref2afout -> dtexport
 #
 # Usage: lauetof_process_run.sh [options] -cell "a b c al be ga" -sg N data.h5
 #
@@ -24,14 +24,21 @@
 #   -fsigma f          dtfind -sigma (default 3)
 #   -maxcell f         dtindex -maxcell (default 1.05 x the longest axis)
 #   -tofradius n       dtintegrate -tofradius (default 5)
+#   -batch n           MTZ batch number (default: the digits of the run name,
+#                      e.g. 13378 for MANDI_13378, so that runs do not clash)
 #
 # The last refinement stage refines an unconstrained (triclinic) cell, as
 # Mantid does for its UB matrix: small systematic errors of the panel
 # geometry are absorbed by the cell, which places the predictions of the
 # outer panels much better.  The output header keeps the space group.
 #
-# Output (in dir): find.ref, refine.head, <run>i.ref (the integrated list)
-# and <run>i.afout (LAUENORM input with theta), plus the logs.
+# Output (in dir): find.ref, refine.head, <run>i.ref (the integrated list),
+# <run>i.afout (LAUENORM input with theta) and <run>i.mtz (unmerged MTZ for
+# AIMLESS, one batch with the crystal orientation; written if dtexport was
+# built, which needs gemmi), plus the logs.  To put several runs in one MTZ
+# file for AIMLESS (scale with SCALES CONSTANT, see TOF_LAUE.md):
+#
+#   dtexport -head r1/r2.head -out all.mtz r*/refine.head r*/*i.afout
 
 BIN=${DTREK_BIN:-$(cd "$(dirname "$0")/../DTTREK" && pwd)}
 OUT=.
@@ -45,6 +52,7 @@ WAVE="4.0 2.0"
 FSIGMA=3
 MAXCELL=""
 TOFRAD=5
+BATCH=""
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -59,12 +67,13 @@ while [ $# -gt 0 ]; do
         -fsigma)    FSIGMA=$2; shift 2 ;;
         -maxcell)   MAXCELL=$2; shift 2 ;;
         -tofradius) TOFRAD=$2; shift 2 ;;
+        -batch)     BATCH=$2; shift 2 ;;
         -*)         echo "ERROR: unknown option $1" >&2; exit 1 ;;
         *)          break ;;
     esac
 done
 if [ $# -ne 1 ] || [ -z "$SG" ] || [ -z "$CELL" ]; then
-    sed -n '3,34p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '3,41p' "$0" | sed 's/^# \{0,1\}//'
     exit 1
 fi
 DATA=$(cd "$(dirname "$1")" && pwd)/$(basename "$1")
@@ -126,6 +135,19 @@ run "${RUN}_6integrate.log" "$BIN/dtintegrate" refine.head -seq 0 $LAST -reso $R
     -wave $W1 $W2 -tofradius $TOFRAD -ref "${RUN}i.ref"
 run "${RUN}_7afout.log" "$BIN/dtref2afout" -scale auto -theta -keepneg -out "${RUN}i.afout" "${RUN}i.ref"
 
+# Unmerged MTZ for AIMLESS, with the orientation of refine.head and the
+# space-group-constrained cell of r2.head
+MTZ=""
+if [ -x "$BIN/dtexport" ]; then
+    [ -n "$BATCH" ] || BATCH=$(echo "$RUN" | sed -n 's/^\(.*[^0-9]\)\{0,1\}\([0-9][0-9]*\)$/\2/p' | sed 's/^0*\([0-9]\)/\1/')
+    [ -n "$BATCH" ] && [ "$BATCH" -gt 0 ] || BATCH=1
+    run "${RUN}_8mtz.log" "$BIN/dtexport" -head r2.head -batch $BATCH -out "${RUN}i.mtz" \
+        refine.head "${RUN}i.afout"
+    MTZ=", $OUT/${RUN}i.mtz (batch $BATCH)"
+else
+    echo "  dtexport is not built (it needs the gemmi library): no ${RUN}i.mtz"
+fi
+
 grep -h "rmsResid (mm)\|rmsResid (TOF" "${RUN}_5refine3.log" | tail -2 | sed 's/^/  /'
 tr -d '\r' < refine.head | grep "^CRYSTAL_UNIT_CELL=" | sed 's/^/  /'
-echo "Done: $OUT/${RUN}i.ref, $OUT/${RUN}i.afout"
+echo "Done: $OUT/${RUN}i.ref, $OUT/${RUN}i.afout$MTZ"

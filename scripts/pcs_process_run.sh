@@ -4,6 +4,7 @@
 # laue_process.txt recipe of the original PCS workflow did:
 #
 #   dtfind -> dtindex -> dtrefine (3 stages) -> dtintegrate -> dtref2afout
+#   -> dtexport
 #
 # Usage: pcs_process_run.sh [options] start.head run.(h5|nx.hdf) flat.(h5|nx.hdf)
 #
@@ -27,13 +28,23 @@
 #   -reso "hi lo"     dtintegrate resolution range (default "1.0 20")
 #   -wave "max min"   wavelength range (default "7.0 0.6")
 #   -noindex          skip dtindex (use the orientation of start.head)
+#   -batch n          MTZ batch number (default: the digits of the run name,
+#                     e.g. 466 for R000466, so that runs do not clash)
 #
 # The intensity thresholds are lower than in the legacy recipes (1000-4000
 # for dtindex, 100 for dtrefine): the intensities of this d*TREK are not
 # scaled up as those of the original program were.
 #
 # Output (in dir): <run>find.ref, <run>refine.head, <run>i.ref (the
-# integrated list) and <run>i.afout (LAUENORM input), plus the logs.
+# integrated list) and <run>i.afout (LAUENORM input, as the legacy
+# negative.awk wrote it), plus the logs.  If dtexport was built (it needs
+# the gemmi library) also <run>i.mtz, an unmerged MTZ file for AIMLESS with
+# one batch and the crystal orientation, made from <run>i_aimless.afout (the
+# same list with theta and the negative intensities, which AIMLESS needs).
+# To put several runs in one MTZ file (scale with SCALES CONSTANT, see
+# TOF_LAUE.md):
+#
+#   dtexport -out all.mtz R*/R*refine.head R*/R*i_aimless.afout
 
 BIN=${DTREK_BIN:-$(cd "$(dirname "$0")/../DTTREK" && pwd)}
 OUT=.
@@ -45,6 +56,7 @@ RTHRESH=10
 RESO="1.0 20"
 WAVE="7.0 0.6"
 INDEX=1
+BATCH=""
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -57,12 +69,13 @@ while [ $# -gt 0 ]; do
         -reso)     RESO=$2; shift 2 ;;
         -wave)     WAVE=$2; shift 2 ;;
         -noindex)  INDEX=0; shift ;;
+        -batch)    BATCH=$2; shift 2 ;;
         -*)        echo "ERROR: unknown option $1" >&2; exit 1 ;;
         *)         break ;;
     esac
 done
 if [ $# -ne 3 ]; then
-    sed -n '3,40p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '3,47p' "$0" | sed 's/^# \{0,1\}//'
     exit 1
 fi
 HEAD=$1
@@ -128,6 +141,20 @@ run "${RUN}_6integrate.log" "$BIN/dtintegrate" "${RUN}refine.head" -flat -cor "$
 
 run "${RUN}_7afout.log" "$BIN/dtref2afout" -scale 1000 -out "${RUN}i.afout" "${RUN}i.ref"
 
+# Unmerged MTZ for AIMLESS, with the orientation of the refined header
+MTZ=""
+if [ -x "$BIN/dtexport" ]; then
+    [ -n "$BATCH" ] || BATCH=$(echo "$RUN" | sed -n 's/^\(.*[^0-9]\)\{0,1\}\([0-9][0-9]*\)$/\2/p' | sed 's/^0*\([0-9]\)/\1/')
+    [ -n "$BATCH" ] && [ "$BATCH" -gt 0 ] || BATCH=1
+    run "${RUN}_8afout_aimless.log" "$BIN/dtref2afout" -scale auto -theta -keepneg \
+        -out "${RUN}i_aimless.afout" "${RUN}i.ref"
+    run "${RUN}_9mtz.log" "$BIN/dtexport" -batch $BATCH -out "${RUN}i.mtz" \
+        "${RUN}refine.head" "${RUN}i_aimless.afout"
+    MTZ=", $OUT/${RUN}i.mtz (batch $BATCH)"
+else
+    echo "  dtexport is not built (it needs the gemmi library): no ${RUN}i.mtz"
+fi
+
 grep -h "rmsResid" "${RUN}_5refine3.log" | sed 's/^/  /'
 grep -h "integrated (" "${RUN}_6integrate.log" | sed 's/^ */  /'
-echo "Done: $OUT/${RUN}i.ref, $OUT/${RUN}i.afout"
+echo "Done: $OUT/${RUN}i.ref, $OUT/${RUN}i.afout$MTZ"
