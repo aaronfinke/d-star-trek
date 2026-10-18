@@ -277,8 +277,10 @@ files) as one unmerged MTZ file for AIMLESS, including its Laue version:
   `SECONDARY` or `ABSORPTION` as wanted.
 
 `dtexport` uses the [gemmi](https://gemmi.readthedocs.io) C++ library
-(`GEMMIHOME` in the master `Makefile`, default `/opt/homebrew/opt/gemmi`;
-`brew install gemmi`).
+(`GEMMIHOME` at the top of the master `Makefile`, default
+`/opt/homebrew/opt/gemmi`; `brew install gemmi`). `make check` lists the
+libraries the build needs and fails if one is missing; `makeall.sh` runs it
+before it cleans and rebuilds everything.
 
 On the nine MANDI runs, the Laue version of AIMLESS (Chebyshev λ
 normalization, 2–4 Å, batch scales, no orientation) gives the following:

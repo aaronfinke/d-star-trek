@@ -38,6 +38,11 @@ MOTIFHOME  := /opt/homebrew/opt/openmotif
 CBFHOME    := /Users/aaronfinke/CBFlib-0.9.6
 # Directory where PTypes library is located.
 PTYPESHOME := $(CURDIR)/ptypes/ptypes-2.1.1
+# Directory where HDF5 is installed (NeXus TOF-Laue files; brew install hdf5).
+HDF5HOME   ?= /opt/homebrew/opt/hdf5
+# Directory where the gemmi C++ library is installed (dtexport writes MTZ
+# files; brew install gemmi).
+GEMMIHOME  ?= /opt/homebrew/opt/gemmi
 
 # Lines below should not need to be modified
 
@@ -70,10 +75,6 @@ GMAKE      = $(GMAKE.$(OS))
 MFILE      = Makefile.$(OS)
 INSTALLDIR = $(CURDIR)/bin$(OSTYPE)
 HOMEBREW   = /opt/homebrew
-# Directory where HDF5 is installed (needed for PCS NeXus TOF-Laue files).
-HDF5HOME   = /opt/homebrew/opt/hdf5
-# Directory where the gemmi C++ library is installed (dtexport writes MTZ files).
-GEMMIHOME  = /opt/homebrew/opt/gemmi
 
 CC  = /usr/bin/clang++
 CXX = /usr/bin/clang++
@@ -84,8 +85,9 @@ $(info )
 $(info Motif directory is $(MOTIFHOME))
 $(info CBF library directory is $(CBFHOME))
 $(info PTypes library directory is $(PTYPESHOME))
-$(info Installation directory is $(INSTALLDIR))
+$(info HDF5 directory is $(HDF5HOME))
 $(info gemmi library directory is $(GEMMIHOME))
+$(info Installation directory is $(INSTALLDIR))
 
 export OSTYPE
 export CC
@@ -99,13 +101,38 @@ export HDF5HOME
 export GEMMIHOME
 
 $(info )
-all:
+
+# Libraries that must be present, as "description|file to test"
+DEPENDENCIES = \
+	"OpenMotif (MOTIFHOME, brew install openmotif)|$(MOTIFHOME)/include/Xm/Xm.h" \
+	"CBFlib (CBFHOME)|$(CBFHOME)/include/cbf.h" \
+	"PTypes (PTYPESHOME)|$(PTYPESHOME)/include/pport.h" \
+	"HDF5 (HDF5HOME, brew install hdf5)|$(HDF5HOME)/include/hdf5.h" \
+	"gemmi (GEMMIHOME, brew install gemmi)|$(GEMMIHOME)/include/gemmi/mtz.hpp" \
+	"gemmi library (GEMMIHOME)|$(GEMMIHOME)/lib/libgemmi_cpp.*"
+
+.PHONY: all check clean cleanbin install
+
+all:	check
 	cd DTTREK;    $(GMAKE) -f $(MFILE) lib
 	cd DTDISPLAY; $(GMAKE) -f $(MFILE) lib
 	cd DTDEV;     $(GMAKE) -f $(MFILE) lib
 	cd DTDISPLAY; $(GMAKE) -f $(MFILE)
 	cd DTTREK;    $(GMAKE) -f $(MFILE)
 	cd DTPROCESS; $(GMAKE) -f $(MFILE)
+
+# Check that the libraries are where the lines at the top say
+check:
+	@status=0; \
+	for dep in $(DEPENDENCIES); do \
+		name=$${dep%%|*}; file=$${dep#*|}; \
+		if ls $$file > /dev/null 2>&1; then echo "  found   $$name: $$file"; \
+		else echo "  MISSING $$name: $$file"; status=1; fi; \
+	done; \
+	if [ $$status -ne 0 ]; then \
+		echo "ERROR: missing libraries; install them or edit the lines at the top of the Makefile"; \
+		exit 1; \
+	fi
 
 clean:
 	cd DTTREK;    $(GMAKE) -f $(MFILE) clean
