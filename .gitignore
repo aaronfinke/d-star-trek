@@ -35,6 +35,8 @@ bin_darwin/
 .vscode/
 *.a
 
+*.pdf
+
 DTTREK/dtaverage
 DTTREK/Cimage_header.o
 DTTREK/dtadd2
